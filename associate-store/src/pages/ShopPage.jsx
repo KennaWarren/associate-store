@@ -58,7 +58,7 @@ export default function ShopPage({ setPage }) {
             color: "#777", fontSize: 17,
             maxWidth: 420, margin: "0 auto 36px", lineHeight: 1.7,
           }}>
-            Exclusive company merchandise for our team. Quality goods at member-only pricing.
+            This exclusive space was created just for you—our Rogers & Hollands | Ashcroft & Oak family. After seeing how much our team loved the branded jackets, polos, water bottles, and backpacks we gifted, many of you asked for a way to get more. We heard you—and we’re thrilled to now offer these inspired items, available for purchase right here.
           </p>
 
           {/* Search */}
