@@ -1,102 +1,95 @@
 import { categoryColors, categoryEmoji, formatCurrency } from "../data/utils";
 
 export default function ProductCard({ product, onClick }) {
-  const colors = categoryColors[product.category] || { bg: "#1a1a1a", accent: "#A22325" };
+  const colors = categoryColors[product.category] || { bg: "#111", accent: "#A22325" };
   const emoji  = categoryEmoji[product.category] || "📦";
-  const hasVariants = Object.keys(product.variants).length > 0;
+  const hasVariants = Object.keys(product.variants || {}).length > 0;
 
   return (
     <article
       onClick={onClick}
       style={{
         background: "#fff",
-        border: "1px solid #e8e8e8",
-        borderRadius: 10,
+        borderRadius: 16,
         overflow: "hidden",
         cursor: "pointer",
-        transition: "transform 0.18s, box-shadow 0.18s",
+        transition: "transform 0.2s, box-shadow 0.2s",
         display: "flex",
         flexDirection: "column",
+        border: "1px solid #f0f0f0",
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.transform = "translateY(-4px)";
-        e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.12)";
+        e.currentTarget.style.transform = "translateY(-6px)";
+        e.currentTarget.style.boxShadow = "0 20px 48px rgba(0,0,0,0.12)";
       }}
       onMouseLeave={e => {
         e.currentTarget.style.transform = "translateY(0)";
         e.currentTarget.style.boxShadow = "none";
       }}
     >
-      {/* Image placeholder */}
+      {/* Image */}
       <div style={{
         background: colors.bg,
-        height: 180,
+        height: 200,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
+        overflow: "hidden",
       }}>
-        <span style={{ fontSize: 56 }}>{emoji}</span>
+        {product.image ? (
+          <img src={product.image} alt={product.name}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <span style={{ fontSize: 52, opacity: 0.9 }}>{emoji}</span>
+        )}
         <span style={{
-          position: "absolute",
-          top: 12,
-          right: 12,
-          background: "#A22325",
+          position: "absolute", top: 12, left: 12,
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(8px)",
           color: "#fff",
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          padding: "3px 8px",
-          borderRadius: 4,
+          fontSize: 10, fontWeight: 700,
+          letterSpacing: "0.12em", textTransform: "uppercase",
+          padding: "4px 10px", borderRadius: 20,
         }}>{product.category}</span>
+        {hasVariants && (
+          <span style={{
+            position: "absolute", top: 12, right: 12,
+            background: "rgba(255,255,255,0.15)",
+            backdropFilter: "blur(8px)",
+            color: "#fff", fontSize: 10,
+            padding: "4px 10px", borderRadius: 20,
+            letterSpacing: "0.08em",
+          }}>Options</span>
+        )}
       </div>
 
       {/* Body */}
-      <div style={{ padding: "16px 18px 18px", flex: 1, display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "18px 20px 20px", flex: 1, display: "flex", flexDirection: "column" }}>
         <h3 style={{
-          fontSize: 15,
-          fontWeight: 600,
-          color: "#111",
-          margin: "0 0 6px",
-          fontFamily: "'Georgia', serif",
-          lineHeight: 1.3,
+          fontSize: 15, fontWeight: 600, color: "#0a0a0a",
+          margin: "0 0 6px", lineHeight: 1.35, flex: 1,
         }}>{product.name}</h3>
         <p style={{
-          fontSize: 12,
-          color: "#777",
-          margin: "0 0 14px",
-          lineHeight: 1.5,
-          flex: 1,
+          fontSize: 12, color: "#aaa", margin: "0 0 16px",
+          lineHeight: 1.5, display: "-webkit-box",
+          WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
         }}>{product.description}</p>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 17, fontWeight: 700, color: "#A22325" }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: "#0a0a0a" }}>
             {formatCurrency(product.price)}
           </span>
-          {hasVariants && (
-            <span style={{ fontSize: 11, color: "#999", letterSpacing: "0.06em" }}>
-              {Object.keys(product.variants).join(" · ").toUpperCase()}
-            </span>
-          )}
+          <span style={{
+            background: "#0a0a0a", color: "#fff",
+            fontSize: 11, fontWeight: 600,
+            letterSpacing: "0.1em", textTransform: "uppercase",
+            padding: "7px 14px", borderRadius: 8,
+            transition: "background 0.15s",
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = "#A22325"}
+            onMouseLeave={e => e.currentTarget.style.background = "#0a0a0a"}
+          >View →</span>
         </div>
-      </div>
-
-      {/* CTA bar */}
-      <div style={{
-        background: "#111",
-        color: "#fff",
-        textAlign: "center",
-        padding: "10px",
-        fontSize: 12,
-        fontWeight: 600,
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-        transition: "background 0.15s",
-      }}
-        onMouseEnter={e => e.currentTarget.style.background = "#A22325"}
-        onMouseLeave={e => e.currentTarget.style.background = "#111"}
-      >
-        Select Options
       </div>
     </article>
   );
