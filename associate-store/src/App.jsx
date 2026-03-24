@@ -7,26 +7,16 @@ import AdminPage from "./pages/AdminPage";
 import AdminLogin from "./components/AdminLogin";
 
 export default function App() {
-  const [page, setPage]           = useState("shop");
+  const [page, setPage]             = useState("shop");
   const [adminAuthed, setAdminAuthed] = useState(false);
-
-  const handleSetPage = (p) => {
-    // If navigating away from admin, keep auth state
-    // (they stay logged in for the session)
-    setPage(p);
-  };
 
   return (
     <StoreProvider>
-      <div style={{
-        minHeight: "100vh",
-        background: "#f7f7f7",
-        fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-      }}>
-        <Header page={page} setPage={handleSetPage} />
+      <div style={{ minHeight: "100vh", background: "#F7F7F7", fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
+        <Header page={page} setPage={setPage} />
         <main>
-          {page === "shop"  && <ShopPage setPage={handleSetPage} />}
-          {page === "cart"  && <CartPage setPage={handleSetPage} />}
+          {page === "shop"  && <ShopPage setPage={setPage} />}
+          {page === "cart"  && <CartPage setPage={setPage} />}
           {page === "admin" && (
             adminAuthed
               ? <AdminPage />
