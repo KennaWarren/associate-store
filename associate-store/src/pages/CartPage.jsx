@@ -18,6 +18,7 @@ export default function CartPage({ setPage }) {
     const e = {};
     if (!form.name.trim())       e.name       = "Required";
     if (!form.email.trim())      e.email      = "Required";
+    if (!form.phone.trim())      e.phone      = "Required";
     if (!form.storeNumber.trim()) e.storeNumber = "Required";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -261,8 +262,11 @@ export default function CartPage({ setPage }) {
                   <Field label="Work Email" error={errors.email}>
                     <input value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} style={inp(errors.email)} placeholder="jane@company.com" type="email" />
                   </Field>
-                  <Field label="Department" error={errors.department}>
-                    <input value={form.department} onChange={e => setForm(f => ({...f, department: e.target.value}))} style={inp(errors.department)} placeholder="Marketing, Engineering, etc." />
+                  <Field label="Phone Number" error={errors.phone}>
+                    <input value={form.phone} onChange={e => setForm(f => ({...f, email: e.target.value}))} style={inp(errors.email)} placeholder="999-999-9999" type="phone" />
+                  </Field>
+                  <Field label="Store Number" error={errors.storeNumber}>
+                    <input value={form.storeNumber} onChange={e => setForm(f => ({...f, storeNumber: e.target.value}))} style={inp(errors.storeNumber)} placeholder="Marketing, Engineering, etc." />
                   </Field>
                   <Field label="Payment Method">
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
