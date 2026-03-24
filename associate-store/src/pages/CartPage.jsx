@@ -11,14 +11,14 @@ export default function CartPage({ setPage }) {
   const [lastOrder, setLastOrder]     = useState(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponMsg, setCouponMsg]     = useState(null);
-  const [form, setForm]               = useState({ name:"", email:"", department:"", paymentMethod:"venmo", notes:"" });
+  const [form, setForm]               = useState({ name:"", email:"", storeNumber:"", paymentMethod:"venmo", notes:"" });
   const [errors, setErrors]           = useState({});
 
   const validate = () => {
     const e = {};
     if (!form.name.trim())       e.name       = "Required";
     if (!form.email.trim())      e.email      = "Required";
-    if (!form.department.trim()) e.department = "Required";
+    if (!form.department.trim()) e.storeNumber = "Required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
