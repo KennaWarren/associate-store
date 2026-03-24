@@ -3,7 +3,6 @@ import { categoryEmoji, formatCurrency } from "../data/utils";
 const categoryAccents = {
   Apparel:     "#FFF0F0",
   Accessories: "#F0FFF4",
-  Drinkware:   "#F0F4FF",
   Bags:        "#FFF8F0",
   Office:      "#F5F0FF",
 };
