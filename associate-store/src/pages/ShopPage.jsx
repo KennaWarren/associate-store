@@ -21,99 +21,105 @@ export default function ShopPage({ setPage }) {
   }
 
   return (
-    <div style={{ background: "#f9f9f9", minHeight: "100vh" }}>
+    <div style={{ background: "#F7F7F7", minHeight: "100vh" }}>
+
       {/* Hero */}
       <div style={{
-        background: "#0a0a0a",
-        padding: "72px 32px 56px",
+        background: "linear-gradient(135deg, #fff 0%, #FFF5F5 50%, #FFF0F0 100%)",
+        padding: "80px 32px 64px",
         textAlign: "center",
+        borderBottom: "1px solid #EAEAEA",
         position: "relative",
         overflow: "hidden",
       }}>
-        {/* Subtle grid bg */}
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: "radial-gradient(circle at 1px 1px, #1f1f1f 1px, transparent 0)",
-          backgroundSize: "32px 32px",
-          opacity: 0.6,
-        }} />
-        {/* Red accent line */}
-        <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 80, height: 3, background: "#A22325", borderRadius: 2 }} />
+        {/* Subtle decorative circles */}
+        <div style={{ position:"absolute", top:-60, right:-60, width:240, height:240, borderRadius:"50%", background:"rgba(162,35,37,0.04)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", bottom:-40, left:-40, width:180, height:180, borderRadius:"50%", background:"rgba(162,35,37,0.03)", pointerEvents:"none" }} />
 
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", maxWidth: 600, margin: "0 auto" }}>
           <span style={{
             display: "inline-block",
-            background: "rgba(162,35,37,0.15)",
-            border: "1px solid rgba(162,35,37,0.3)",
+            background: "#FFF0F0",
+            border: "1px solid rgba(162,35,37,0.2)",
             color: "#A22325",
-            fontSize: 10, fontWeight: 700,
-            letterSpacing: "0.2em", textTransform: "uppercase",
-            padding: "5px 14px", borderRadius: 20, marginBottom: 20,
+            fontSize: 11, fontWeight: 700,
+            letterSpacing: "0.18em", textTransform: "uppercase",
+            padding: "6px 16px", borderRadius: 20, marginBottom: 24,
           }}>Associates Only</span>
 
           <h1 style={{
             fontFamily: "'Georgia', serif",
-            fontSize: "clamp(2.2rem, 5vw, 3.6rem)",
-            color: "#fff", fontWeight: 700,
-            margin: "0 0 16px", letterSpacing: "-0.02em", lineHeight: 1.1,
+            fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
+            color: "#1a1a1a", fontWeight: 700,
+            margin: "0 0 18px", letterSpacing: "-0.02em", lineHeight: 1.1,
           }}>The Associate Store</h1>
 
           <p style={{
-            color: "#555", fontSize: 16,
-            maxWidth: 440, margin: "0 auto 32px", lineHeight: 1.7,
+            color: "#777", fontSize: 17,
+            maxWidth: 420, margin: "0 auto 36px", lineHeight: 1.7,
           }}>
-            Exclusive merchandise for our team. Quality goods at member-only pricing.
+            Exclusive company merchandise for our team. Quality goods at member-only pricing.
           </p>
 
           {/* Search */}
-          <div style={{ maxWidth: 380, margin: "0 auto", position: "relative" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2"
-              style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }}>
+          <div style={{ maxWidth: 400, margin: "0 auto", position: "relative" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2"
+              style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", pointerEvents:"none" }}>
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
-            <input type="text" placeholder="Search products..." value={search}
-              onChange={e => setSearch(e.target.value)}
+            <input
+              type="text" placeholder="Search products..."
+              value={search} onChange={e => setSearch(e.target.value)}
               style={{
-                width: "100%", padding: "13px 16px 13px 42px",
-                borderRadius: 12, border: "1px solid #1f1f1f",
-                background: "#141414", color: "#fff",
+                width: "100%", padding: "14px 16px 14px 46px",
+                borderRadius: 12, border: "1.5px solid #EAEAEA",
+                background: "#fff", color: "#1a1a1a",
                 fontSize: 14, outline: "none", boxSizing: "border-box",
-              }} />
+                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+                transition: "border-color 0.2s, box-shadow 0.2s",
+              }}
+              onFocus={e => { e.target.style.borderColor = "#A22325"; e.target.style.boxShadow = "0 2px 16px rgba(162,35,37,0.12)"; }}
+              onBlur={e => { e.target.style.borderColor = "#EAEAEA"; e.target.style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)"; }}
+            />
           </div>
         </div>
       </div>
 
-      {/* Category pills */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: "0 32px", overflowX: "auto" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: 6, padding: "14px 0" }}>
+      {/* Category filters */}
+      <div style={{ background: "#fff", borderBottom: "1px solid #EAEAEA", padding: "0 32px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", gap: 6, padding: "14px 0", overflowX: "auto" }}>
           {allCategories.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} style={{
-              padding: "7px 18px",
+              padding: "8px 20px",
               border: "1.5px solid",
-              borderColor: activeCategory === cat ? "#0a0a0a" : "#eee",
+              borderColor: activeCategory === cat ? "#A22325" : "#EAEAEA",
               borderRadius: 24,
-              background: activeCategory === cat ? "#0a0a0a" : "#fff",
-              color: activeCategory === cat ? "#fff" : "#777",
-              fontSize: 12, fontWeight: activeCategory === cat ? 700 : 400,
+              background: activeCategory === cat ? "#A22325" : "#fff",
+              color: activeCategory === cat ? "#fff" : "#666",
+              fontSize: 13, fontWeight: activeCategory === cat ? 700 : 500,
               cursor: "pointer", whiteSpace: "nowrap",
-              letterSpacing: "0.04em",
+              letterSpacing: "0.02em",
               transition: "all 0.15s",
-            }}>{cat}</button>
+              boxShadow: activeCategory === cat ? "0 2px 8px rgba(162,35,37,0.25)" : "none",
+            }}
+              onMouseEnter={e => { if (activeCategory !== cat) { e.currentTarget.style.borderColor = "#A22325"; e.currentTarget.style.color = "#A22325"; }}}
+              onMouseLeave={e => { if (activeCategory !== cat) { e.currentTarget.style.borderColor = "#EAEAEA"; e.currentTarget.style.color = "#666"; }}}
+            >{cat}</button>
           ))}
         </div>
       </div>
 
-      {/* Grid */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "36px 32px 80px" }}>
-        <p style={{ fontSize: 12, color: "#bbb", marginBottom: 24, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-          {filtered.length} Product{filtered.length !== 1 ? "s" : ""}
-          {activeCategory !== "All" ? ` — ${activeCategory}` : ""}
+      {/* Product Grid */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 32px 80px" }}>
+        <p style={{ fontSize: 13, color: "#bbb", marginBottom: 28, letterSpacing: "0.04em" }}>
+          Showing {filtered.length} product{filtered.length !== 1 ? "s" : ""}
+          {activeCategory !== "All" ? ` in ${activeCategory}` : ""}
         </p>
 
         {filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "80px 0", color: "#ccc" }}>
             <p style={{ fontSize: 40, marginBottom: 12 }}>🔍</p>
-            <p style={{ fontSize: 16 }}>No products found.</p>
+            <p style={{ fontSize: 16, color: "#aaa" }}>No products found.</p>
           </div>
         ) : (
           <div style={{
@@ -130,3 +136,4 @@ export default function ShopPage({ setPage }) {
     </div>
   );
 }
+
