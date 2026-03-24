@@ -18,7 +18,7 @@ export default function CartPage({ setPage }) {
     const e = {};
     if (!form.name.trim())       e.name       = "Required";
     if (!form.email.trim())      e.email      = "Required";
-    if (!form.department.trim()) e.storeNumber = "Required";
+    if (!form.storeNumber.trim()) e.storeNumber = "Required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
