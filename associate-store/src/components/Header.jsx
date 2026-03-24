@@ -5,8 +5,8 @@ export default function Header({ page, setPage }) {
 
   return (
     <header style={{
-      background: "#111",
-      borderBottom: "3px solid #A22325",
+      background: "#0a0a0a",
+      borderBottom: "1px solid #1f1f1f",
       position: "sticky",
       top: 0,
       zIndex: 100,
@@ -14,70 +14,63 @@ export default function Header({ page, setPage }) {
       <div style={{
         maxWidth: 1200,
         margin: "0 auto",
-        padding: "0 24px",
-        height: 64,
+        padding: "0 32px",
+        height: 68,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
       }}>
-        {/* Logo */}
         <button onClick={() => setPage("shop")} style={{
           background: "none", border: "none", cursor: "pointer",
-          display: "flex", flexDirection: "column", alignItems: "flex-start",
+          display: "flex", alignItems: "center", gap: 12,
         }}>
-          <span style={{
-            fontFamily: "'Georgia', serif",
-            fontSize: 18,
-            fontWeight: 700,
-            color: "#fff",
-            letterSpacing: "0.04em",
-          }}>The Associate Store</span>
-          <span style={{
-            fontSize: 10,
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "#A22325",
-            marginTop: 1,
-          }}>Associate Store</span>
+          <div style={{
+            width: 32, height: 32,
+            background: "#A22325",
+            borderRadius: 8,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <span style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: "Georgia, serif" }}>A</span>
+          </div>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Your Company
+            </div>
+            <div style={{ fontSize: 10, color: "#555", letterSpacing: "0.14em", textTransform: "uppercase", marginTop: 1 }}>
+              Associate Store
+            </div>
+          </div>
         </button>
 
-        {/* Nav */}
-        <nav style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <nav style={{ display: "flex", gap: 2, alignItems: "center" }}>
           <NavBtn active={page === "shop"} onClick={() => setPage("shop")}>Shop</NavBtn>
           <NavBtn active={page === "admin"} onClick={() => setPage("admin")}>Admin</NavBtn>
-          <button
-            onClick={() => setPage("cart")}
-            style={{
-              background: page === "cart" ? "#A22325" : "transparent",
-              border: "1.5px solid",
-              borderColor: page === "cart" ? "#A22325" : "#444",
-              color: "#fff",
-              borderRadius: 6,
-              padding: "7px 16px",
-              cursor: "pointer",
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              transition: "all 0.2s",
-            }}
-          >
+          <button onClick={() => setPage("cart")} style={{
+            marginLeft: 8,
+            background: page === "cart" ? "#A22325" : "transparent",
+            border: "1px solid",
+            borderColor: page === "cart" ? "#A22325" : "#2a2a2a",
+            color: "#fff",
+            borderRadius: 8,
+            padding: "8px 18px",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            transition: "all 0.2s",
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
             Cart
             {cartCount > 0 && (
               <span style={{
-                background: "#A22325",
-                color: "#fff",
-                borderRadius: "50%",
-                width: 20,
-                height: 20,
-                fontSize: 11,
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginLeft: 2,
+                background: "#A22325", color: "#fff",
+                borderRadius: "50%", width: 18, height: 18,
+                fontSize: 10, fontWeight: 800,
+                display: "flex", alignItems: "center", justifyContent: "center",
               }}>{cartCount}</span>
             )}
           </button>
@@ -90,17 +83,18 @@ export default function Header({ page, setPage }) {
 function NavBtn({ active, onClick, children }) {
   return (
     <button onClick={onClick} style={{
-      background: "none",
+      background: active ? "#1a1a1a" : "none",
       border: "none",
-      color: active ? "#fff" : "#999",
-      fontSize: 13,
-      fontWeight: active ? 600 : 400,
-      letterSpacing: "0.08em",
+      color: active ? "#fff" : "#555",
+      fontSize: 12,
+      fontWeight: 600,
+      letterSpacing: "0.1em",
       textTransform: "uppercase",
       cursor: "pointer",
-      padding: "8px 12px",
-      borderRadius: 4,
-      transition: "color 0.15s",
+      padding: "8px 16px",
+      borderRadius: 8,
+      transition: "all 0.15s",
     }}>{children}</button>
   );
 }
+
