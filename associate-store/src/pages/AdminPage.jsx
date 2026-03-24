@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useStore } from "../context/StoreContext";
 import { formatCurrency, formatDate } from "../data/utils";
 import { paymentMethods } from "../data/products";
@@ -10,32 +10,104 @@ const STATUS_COLORS  = {
   fulfilled:  { bg:"#F0FDF4", color:"#166534", border:"#BBF7D0" },
   cancelled:  { bg:"#FEF2F2", color:"#991B1B", border:"#FECACA" },
 };
+const CATEGORIES = ["Apparel","Accessories","Drinkware","Bags","Office","Other"];
 const TABS = ["orders","products","coupons"];
+
+/* ─── Convert file to base64 data URL ─── */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ─── Reusable image upload button ─── */
+function ImageUploader({ value, onChange, label = "Upload Image", small = false }) {
+  const ref = useRef();
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert("Image must be under 2 MB."); return; }
+    const b64 = await fileToBase64(file);
+    onChange(b64);
+  };
+
+  return (
+    <div>
+      <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }} />
+      {value ? (
+        <div style={{ position:"relative", display:"inline-block" }}>
+          <img src={value} alt="preview" style={{
+            width: small ? 72 : "100%",
+            height: small ? 72 : 160,
+            objectFit:"cover",
+            borderRadius: small ? 8 : 12,
+            border:"1.5px solid #EAEAEA",
+            display:"block",
+          }} />
+          <button onClick={() => onChange("")} style={{
+            position:"absolute", top: -8, right: -8,
+            background:"#A22325", color:"#fff",
+            border:"none", borderRadius:"50%",
+            width:22, height:22, fontSize:13, cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 2px 6px rgba(0,0,0,0.2)",
+          }}>×</button>
+          <button onClick={() => ref.current.click()} style={{
+            marginTop: small ? 4 : 8,
+            display:"block",
+            fontSize:11, color:"#A22325", fontWeight:600,
+            background:"none", border:"none", cursor:"pointer", padding:0,
+          }}>Change</button>
+        </div>
+      ) : (
+        <button onClick={() => ref.current.click()} style={{
+          width: small ? 72 : "100%",
+          height: small ? 72 : 120,
+          border:"2px dashed #EAEAEA",
+          borderRadius: small ? 10 : 12,
+          background:"#F7F7F7",
+          cursor:"pointer",
+          display:"flex", flexDirection:"column",
+          alignItems:"center", justifyContent:"center",
+          gap:6, transition:"border-color 0.15s",
+        }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = "#A22325"}
+          onMouseLeave={e => e.currentTarget.style.borderColor = "#EAEAEA"}
+        >
+          <span style={{ fontSize: small ? 18 : 24 }}>📷</span>
+          {!small && <span style={{ fontSize:12, color:"#bbb", fontWeight:500 }}>{label}</span>}
+          {!small && <span style={{ fontSize:11, color:"#ddd" }}>PNG, JPG — max 2MB</span>}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const [tab, setTab] = useState("orders");
   return (
-    <div style={{ background: "#F7F7F7", minHeight: "100vh" }}>
-      {/* Tab bar */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #EAEAEA", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 32px", display: "flex", gap: 4, alignItems: "center" }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a", marginRight: 16, letterSpacing: "0.02em" }}>Admin</span>
+    <div style={{ background:"#F7F7F7", minHeight:"100vh" }}>
+      <div style={{ background:"#fff", borderBottom:"1px solid #EAEAEA", boxShadow:"0 1px 4px rgba(0,0,0,0.04)" }}>
+        <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 32px", display:"flex", gap:4, alignItems:"center" }}>
+          <span style={{ fontSize:13, fontWeight:700, color:"#1a1a1a", marginRight:16, letterSpacing:"0.02em" }}>Admin</span>
           {TABS.map(t => (
             <button key={t} onClick={() => setTab(t)} style={{
-              background: tab === t ? "#FFF0F0" : "none",
-              border: "none",
-              color: tab === t ? "#A22325" : "#888",
-              padding: "16px 18px",
-              fontSize: 13, fontWeight: tab === t ? 700 : 500,
-              letterSpacing: "0.04em", textTransform: "capitalize",
-              cursor: "pointer", transition: "all 0.15s",
-              borderBottom: tab === t ? "2px solid #A22325" : "2px solid transparent",
+              background: tab===t ? "#FFF0F0" : "none",
+              border:"none",
+              color: tab===t ? "#A22325" : "#888",
+              padding:"16px 18px",
+              fontSize:13, fontWeight: tab===t ? 700 : 500,
+              letterSpacing:"0.04em", textTransform:"capitalize",
+              cursor:"pointer", transition:"all 0.15s",
+              borderBottom: tab===t ? "2px solid #A22325" : "2px solid transparent",
             }}>{t}</button>
           ))}
         </div>
       </div>
-
-      <div style={{ padding: "36px 32px" }}>
+      <div style={{ padding:"36px 32px" }}>
         {tab === "orders"   && <OrdersTab />}
         {tab === "products" && <ProductsTab />}
         {tab === "coupons"  && <CouponsTab />}
@@ -44,7 +116,9 @@ export default function AdminPage() {
   );
 }
 
-/* ═══ ORDERS TAB ═══ */
+/* ══════════════════════════════════════
+   ORDERS TAB
+══════════════════════════════════════ */
 function OrdersTab() {
   const { orders, updateOrder, deleteOrder } = useStore();
   const [filter, setFilter]         = useState("all");
@@ -86,7 +160,7 @@ function OrdersTab() {
   };
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+    <div style={{ maxWidth:1100, margin:"0 auto" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:28, flexWrap:"wrap", gap:12 }}>
         <div>
           <h2 style={{ fontFamily:"'Georgia', serif", fontSize:26, color:"#1a1a1a", marginBottom:4 }}>Orders</h2>
@@ -95,15 +169,13 @@ function OrdersTab() {
         <button onClick={exportCSV} style={actionBtn("#1a1a1a")}>↓ Export CSV</button>
       </div>
 
-      {/* Stats */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(190px, 1fr))", gap:16, marginBottom:28 }}>
         <StatCard label="Total Orders"  value={orders.length} sub={`${orders.filter(o=>o.status==="pending").length} pending`} />
         <StatCard label="Total Revenue" value={formatCurrency(totalRev)} sub="all orders" />
-        <StatCard label="Collected"     value={formatCurrency(paidRev)} sub={`${orders.filter(o=>o.paid).length} paid`} accent="#166534" bg="#F0FDF4" />
-        <StatCard label="Outstanding"   value={formatCurrency(totalRev-paidRev)} sub={`${orders.filter(o=>!o.paid).length} unpaid`} accent="#A22325" bg="#FFF0F0" />
+        <StatCard label="Collected"     value={formatCurrency(paidRev)} sub={`${orders.filter(o=>o.paid).length} paid`} accent="#166534" />
+        <StatCard label="Outstanding"   value={formatCurrency(totalRev-paidRev)} sub={`${orders.filter(o=>!o.paid).length} unpaid`} accent="#A22325" />
       </div>
 
-      {/* Filters */}
       <div style={{ background:"#fff", borderRadius:14, padding:"16px 20px", marginBottom:16, display:"flex", gap:12, flexWrap:"wrap", alignItems:"center", border:"1px solid #EAEAEA", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
         <input type="text" placeholder="Search by name, email, order ID..." value={search} onChange={e=>setSearch(e.target.value)}
           style={{ flex:1, minWidth:200, padding:"10px 14px", border:"1.5px solid #EAEAEA", borderRadius:10, fontSize:13, outline:"none", background:"#F7F7F7", color:"#1a1a1a" }} />
@@ -113,21 +185,15 @@ function OrdersTab() {
           options={[["all","All"],["paid","Paid"],["unpaid","Unpaid"]]} />
       </div>
 
-      {filtered.length === 0 ? (
-        <EmptyState icon="📭" text="No orders match your filters." />
-      ) : (
+      {filtered.length === 0 ? <EmptyState icon="📭" text="No orders match your filters." /> : (
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           {filtered.map(order => {
             const isExp     = expanded === order.id;
             const statusSty = STATUS_COLORS[order.status] || STATUS_COLORS.pending;
             const payMethod = paymentMethods.find(p=>p.id===order.paymentMethod);
             return (
-              <div key={order.id} style={{
-                background:"#fff", border:"1px solid #EAEAEA", borderRadius:14,
-                overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.04)",
-                borderLeft:`4px solid ${order.paid ? "#16a34a" : "#A22325"}`,
-              }}>
-                <div onClick={() => setExpanded(isExp ? null : order.id)}
+              <div key={order.id} style={{ background:"#fff", border:"1px solid #EAEAEA", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.04)", borderLeft:`4px solid ${order.paid?"#16a34a":"#A22325"}` }}>
+                <div onClick={() => setExpanded(isExp?null:order.id)}
                   style={{ padding:"16px 20px", display:"grid", gridTemplateColumns:"1fr 110px 100px 130px 110px 36px", gap:12, alignItems:"center", cursor:"pointer", transition:"background 0.1s" }}
                   onMouseEnter={e=>e.currentTarget.style.background="#FAFAFA"}
                   onMouseLeave={e=>e.currentTarget.style.background="#fff"}
@@ -149,7 +215,6 @@ function OrdersTab() {
                   </label>
                   <span style={{ color:"#ccc", fontSize:14 }}>{isExp?"▲":"▼"}</span>
                 </div>
-
                 {isExp && (
                   <div style={{ borderTop:"1px solid #F0F0F0", padding:"20px", background:"#FAFAFA" }}>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20, marginBottom:20 }}>
@@ -191,9 +256,10 @@ function OrdersTab() {
   );
 }
 
-/* ═══ PRODUCTS TAB ═══ */
-const CATEGORIES = ["Apparel","Accessories","Drinkware","Bags","Office","Other"];
-const emptyProduct = { name:"", description:"", price:"", category:"Apparel", image:"", variants:{} };
+/* ══════════════════════════════════════
+   PRODUCTS TAB
+══════════════════════════════════════ */
+const emptyProduct = { name:"", description:"", price:"", category:"Apparel", image:"", variants:{}, variantImages:{} };
 
 function ProductsTab() {
   const { products, addProduct, updateProduct, deleteProduct } = useStore();
@@ -205,8 +271,11 @@ function ProductsTab() {
   const [msg, setMsg]                 = useState("");
 
   const openNew  = () => { setForm(emptyProduct); setEditing("new"); setVariantKey(""); setVariantVals(""); };
-  const openEdit = (p) => { setForm({...p, price:String(p.price), image:p.image||""}); setEditing(p.id); setVariantKey(""); setVariantVals(""); };
-  const close    = () => { setEditing(null); setMsg(""); };
+  const openEdit = (p) => {
+    setForm({ ...p, price:String(p.price), image:p.image||"", variants:p.variants||{}, variantImages:p.variantImages||{} });
+    setEditing(p.id); setVariantKey(""); setVariantVals("");
+  };
+  const close = () => { setEditing(null); setMsg(""); };
 
   const addVariant = () => {
     if (!variantKey.trim() || !variantVals.trim()) return;
@@ -214,11 +283,28 @@ function ProductsTab() {
     setForm(f => ({ ...f, variants: { ...f.variants, [variantKey.trim()]: vals } }));
     setVariantKey(""); setVariantVals("");
   };
-  const removeVariant = (key) => setForm(f => { const v={...f.variants}; delete v[key]; return {...f,variants:v}; });
+  const removeVariant = (key) => {
+    setForm(f => {
+      const v = {...f.variants}; delete v[key];
+      // Also clean up any variant images for this key
+      const vi = {...f.variantImages};
+      Object.keys(vi).forEach(k => { if (k.startsWith(key+":")) delete vi[k]; });
+      return {...f, variants:v, variantImages:vi};
+    });
+  };
+
+  // variantImages are keyed as "VariantKey:OptionValue" e.g. "Color:Red"
+  const setVariantImage = (variantKey, optionValue, imageData) => {
+    const key = `${variantKey}:${optionValue}`;
+    setForm(f => ({ ...f, variantImages: { ...f.variantImages, [key]: imageData } }));
+  };
+  const getVariantImage = (variantKey, optionValue) => {
+    return form.variantImages?.[`${variantKey}:${optionValue}`] || "";
+  };
 
   const handleSave = () => {
     if (!form.name.trim() || !form.price) { setMsg("Name and price are required."); return; }
-    const data = { ...form, price: parseFloat(form.price) };
+    const data = { ...form, price:parseFloat(form.price) };
     if (editing === "new") addProduct(data); else updateProduct(editing, data);
     close();
   };
@@ -236,7 +322,7 @@ function ProductsTab() {
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:18 }}>
         {products.map(p => (
           <div key={p.id} style={{ background:"#fff", border:"1px solid #EAEAEA", borderRadius:16, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
-            <div style={{ background:"#F7F7F7", height:120, display:"flex", alignItems:"center", justifyContent:"center", fontSize:44 }}>
+            <div style={{ background:"#F7F7F7", height:130, display:"flex", alignItems:"center", justifyContent:"center", fontSize:44, overflow:"hidden" }}>
               {p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/> : "📦"}
             </div>
             <div style={{ padding:"16px 18px" }}>
@@ -265,44 +351,98 @@ function ProductsTab() {
         ))}
       </div>
 
+      {/* ── Product Edit / Add Modal ── */}
       {editing !== null && (
-        <div onClick={close} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", backdropFilter:"blur(2px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:300, padding:20 }}>
-          <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:560, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }}>
-            <div style={{ padding:"24px 28px", borderBottom:"1px solid #EAEAEA", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div onClick={close} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", backdropFilter:"blur(3px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:300, padding:20 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:620, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 64px rgba(0,0,0,0.15)" }}>
+
+            {/* Header */}
+            <div style={{ padding:"22px 28px", borderBottom:"1px solid #EAEAEA", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:"#fff", zIndex:10 }}>
               <h3 style={{ fontFamily:"'Georgia', serif", fontSize:20, color:"#1a1a1a" }}>{editing==="new"?"Add Product":"Edit Product"}</h3>
               <button onClick={close} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#bbb" }}>×</button>
             </div>
-            <div style={{ padding:"24px 28px", display:"grid", gap:18 }}>
-              <PField label="Product Name *"><input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} style={pInp} placeholder="Classic Logo Tee" /></PField>
-              <PField label="Description"><textarea value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} rows={3} style={{...pInp,resize:"vertical"}} placeholder="Short product description..." /></PField>
+
+            <div style={{ padding:"24px 28px", display:"grid", gap:22 }}>
+
+              {/* Basic info */}
+              <PField label="Product Name *">
+                <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} style={pInp} placeholder="Classic Logo Tee" />
+              </PField>
+
+              <PField label="Description">
+                <textarea value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} rows={3} style={{...pInp,resize:"vertical"}} placeholder="Short product description..." />
+              </PField>
+
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                <PField label="Price ($) *"><input type="number" min="0" step="0.01" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} style={pInp} placeholder="0.00" /></PField>
+                <PField label="Price ($) *">
+                  <input type="number" min="0" step="0.01" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} style={pInp} placeholder="0.00" />
+                </PField>
                 <PField label="Category">
                   <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={pInp}>
                     {CATEGORIES.map(c=><option key={c}>{c}</option>)}
                   </select>
                 </PField>
               </div>
-              <PField label="Image URL (optional)"><input value={form.image} onChange={e=>setForm(f=>({...f,image:e.target.value}))} style={pInp} placeholder="https://example.com/image.jpg" /></PField>
+
+              {/* Main product image */}
+              <PField label="Main Product Image">
+                <ImageUploader
+                  value={form.image}
+                  onChange={img => setForm(f=>({...f,image:img}))}
+                  label="Upload Main Image"
+                />
+              </PField>
+
+              {/* Variants section */}
               <div>
-                <p style={{ fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#aaa", marginBottom:10 }}>Variants</p>
-                {Object.entries(form.variants).map(([key,vals]) => (
-                  <div key={key} style={{ background:"#F7F7F7", border:"1px solid #EAEAEA", borderRadius:10, padding:"10px 14px", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span><span style={{fontSize:13,fontWeight:600,color:"#333"}}>{key}:</span> <span style={{fontSize:13,color:"#777"}}>{vals.join(", ")}</span></span>
-                    <button onClick={()=>removeVariant(key)} style={{ background:"none", border:"none", color:"#A22325", cursor:"pointer", fontSize:18 }}>×</button>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                  <p style={{ fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#aaa" }}>Variants & Images</p>
+                </div>
+
+                {/* Existing variants */}
+                {Object.entries(form.variants).map(([key, vals]) => (
+                  <div key={key} style={{ background:"#F7F7F7", border:"1px solid #EAEAEA", borderRadius:12, padding:"16px", marginBottom:12 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                      <span style={{ fontSize:13, fontWeight:700, color:"#1a1a1a", letterSpacing:"0.04em" }}>{key}</span>
+                      <button onClick={()=>removeVariant(key)} style={{ background:"none", border:"none", color:"#A22325", cursor:"pointer", fontSize:13, fontWeight:600 }}>Remove variant</button>
+                    </div>
+
+                    {/* Each option with its image uploader */}
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px, 1fr))", gap:12 }}>
+                      {vals.map(opt => (
+                        <div key={opt} style={{ textAlign:"center" }}>
+                          <ImageUploader
+                            value={getVariantImage(key, opt)}
+                            onChange={img => setVariantImage(key, opt, img)}
+                            small={true}
+                          />
+                          <p style={{ fontSize:12, color:"#555", marginTop:5, fontWeight:500 }}>{opt}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ fontSize:11, color:"#ccc", marginTop:10 }}>
+                      Upload an image for each option — it will show when the customer selects it.
+                    </p>
                   </div>
                 ))}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr auto", gap:8, marginTop:8 }}>
-                  <input value={variantKey} onChange={e=>setVariantKey(e.target.value)} style={pInp} placeholder="e.g. Size" />
-                  <input value={variantVals} onChange={e=>setVariantVals(e.target.value)} style={pInp} placeholder="S, M, L, XL" />
-                  <button onClick={addVariant} style={{...actionBtn("#1a1a1a"),padding:"0 14px",width:"auto"}}>Add</button>
+
+                {/* Add new variant */}
+                <div style={{ border:"1.5px dashed #EAEAEA", borderRadius:12, padding:"14px 16px", background:"#fff" }}>
+                  <p style={{ fontSize:12, color:"#bbb", marginBottom:10, fontWeight:500 }}>Add a new variant</p>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr auto", gap:8 }}>
+                    <input value={variantKey} onChange={e=>setVariantKey(e.target.value)} style={pInp} placeholder="e.g. Color" />
+                    <input value={variantVals} onChange={e=>setVariantVals(e.target.value)} style={pInp} placeholder="Red, Blue, Green" />
+                    <button onClick={addVariant} style={{...actionBtn("#1a1a1a"),padding:"0 14px",whiteSpace:"nowrap"}}>Add</button>
+                  </div>
+                  <p style={{ fontSize:11, color:"#ddd", marginTop:6 }}>Comma-separated options. Then upload images for each option above.</p>
                 </div>
-                <p style={{ fontSize:11, color:"#ccc", marginTop:6 }}>Comma-separated options per variant.</p>
               </div>
+
               {msg && <p style={{ fontSize:13, color:"#A22325" }}>{msg}</p>}
+
               <div style={{ display:"flex", gap:10 }}>
-                <button onClick={handleSave} style={{...actionBtn("#A22325"),flex:1}}>{editing==="new"?"Add Product":"Save Changes"}</button>
-                <button onClick={close} style={{...actionBtn("#1a1a1a"),flex:1}}>Cancel</button>
+                <button onClick={handleSave} style={{...actionBtn("#A22325"),flex:1,padding:"13px"}}>{editing==="new"?"Add Product":"Save Changes"}</button>
+                <button onClick={close} style={{...actionBtn("#888"),flex:1,padding:"13px"}}>Cancel</button>
               </div>
             </div>
           </div>
@@ -312,14 +452,16 @@ function ProductsTab() {
   );
 }
 
-/* ═══ COUPONS TAB ═══ */
+/* ══════════════════════════════════════
+   COUPONS TAB
+══════════════════════════════════════ */
 const emptyCoupon = { code:"", type:"percent", value:"", active:true, description:"" };
 
 function CouponsTab() {
   const { coupons, addCoupon, updateCoupon, deleteCoupon } = useStore();
-  const [editing, setEditing]   = useState(null);
-  const [form, setForm]         = useState(emptyCoupon);
-  const [msg, setMsg]           = useState("");
+  const [editing, setEditing]       = useState(null);
+  const [form, setForm]             = useState(emptyCoupon);
+  const [msg, setMsg]               = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
 
   const openNew  = () => { setForm(emptyCoupon); setEditing("new"); };
@@ -346,12 +488,7 @@ function CouponsTab() {
       {coupons.length === 0 ? <EmptyState icon="🏷️" text="No coupons yet." /> : (
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
           {coupons.map(c => (
-            <div key={c.id} style={{
-              background:"#fff", border:"1px solid #EAEAEA", borderRadius:14,
-              padding:"18px 22px", display:"flex", alignItems:"center", gap:16,
-              boxShadow:"0 2px 8px rgba(0,0,0,0.04)",
-              borderLeft:`4px solid ${c.active?"#16a34a":"#EAEAEA"}`,
-            }}>
+            <div key={c.id} style={{ background:"#fff", border:"1px solid #EAEAEA", borderRadius:14, padding:"18px 22px", display:"flex", alignItems:"center", gap:16, boxShadow:"0 2px 8px rgba(0,0,0,0.04)", borderLeft:`4px solid ${c.active?"#16a34a":"#EAEAEA"}` }}>
               <div style={{ flex:1 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
                   <span style={{ fontFamily:"'Courier New', monospace", fontWeight:700, fontSize:16, color:"#1a1a1a", background:"#F7F7F7", padding:"3px 12px", borderRadius:8, letterSpacing:"0.08em", border:"1px solid #EAEAEA" }}>{c.code}</span>
@@ -404,8 +541,8 @@ function CouponsTab() {
               </label>
               {msg && <p style={{ fontSize:13, color:"#A22325" }}>{msg}</p>}
               <div style={{ display:"flex", gap:10 }}>
-                <button onClick={handleSave} style={{...actionBtn("#A22325"),flex:1}}>{editing==="new"?"Create":"Save Changes"}</button>
-                <button onClick={close} style={{...actionBtn("#1a1a1a"),flex:1}}>Cancel</button>
+                <button onClick={handleSave} style={{...actionBtn("#A22325"),flex:1,padding:"12px"}}>{editing==="new"?"Create":"Save Changes"}</button>
+                <button onClick={close} style={{...actionBtn("#888"),flex:1,padding:"12px"}}>Cancel</button>
               </div>
             </div>
           </div>
@@ -416,7 +553,7 @@ function CouponsTab() {
 }
 
 /* ── Shared helpers ── */
-function StatCard({ label, value, sub, accent="#1a1a1a", bg="#F7F7F7" }) {
+function StatCard({ label, value, sub, accent="#1a1a1a" }) {
   return (
     <div style={{ background:"#fff", borderRadius:14, padding:"20px 22px", border:"1px solid #EAEAEA", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
       <p style={{ fontSize:11, color:"#bbb", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:8, fontWeight:600 }}>{label}</p>
@@ -430,14 +567,7 @@ function FilterGroup({ label, value, onChange, options }) {
     <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
       <span style={{ fontSize:12, color:"#bbb", fontWeight:600 }}>{label}</span>
       {options.map(([val,lbl]) => (
-        <button key={val} onClick={()=>onChange(val)} style={{
-          padding:"5px 13px", border:"1.5px solid",
-          borderColor:value===val?"#A22325":"#EAEAEA",
-          borderRadius:20, background:value===val?"#A22325":"#fff",
-          color:value===val?"#fff":"#777",
-          fontSize:12, fontWeight:value===val?700:400, cursor:"pointer",
-          transition:"all 0.15s",
-        }}>{lbl}</button>
+        <button key={val} onClick={()=>onChange(val)} style={{ padding:"5px 13px", border:"1.5px solid", borderColor:value===val?"#A22325":"#EAEAEA", borderRadius:20, background:value===val?"#A22325":"#fff", color:value===val?"#fff":"#777", fontSize:12, fontWeight:value===val?700:400, cursor:"pointer", transition:"all 0.15s" }}>{lbl}</button>
       ))}
     </div>
   );
@@ -462,5 +592,5 @@ function PField({ label, children }) {
 const pInp      = { width:"100%", padding:"11px 14px", border:"1.5px solid #EAEAEA", borderRadius:10, fontSize:14, color:"#1a1a1a", outline:"none", background:"#F7F7F7", boxSizing:"border-box" };
 const lbl       = { fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#bbb", marginBottom:6 };
 const sm        = { fontSize:13, color:"#555" };
-const actionBtn = (bg) => ({ background:bg, color:"#fff", border:"none", borderRadius:10, padding:"11px 22px", fontSize:13, fontWeight:600, cursor:"pointer", letterSpacing:"0.04em", boxShadow: bg==="#A22325"?"0 2px 10px rgba(162,35,37,0.25)":"none" });
+const actionBtn = (bg) => ({ background:bg, color:"#fff", border:"none", borderRadius:10, padding:"11px 22px", fontSize:13, fontWeight:600, cursor:"pointer", letterSpacing:"0.04em" });
 const smBtn     = (bg, color="#fff") => ({ background:bg, color, border:`1px solid ${bg==="#EAEAEA"?"#EAEAEA":"transparent"}`, borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:600, cursor:"pointer" });
