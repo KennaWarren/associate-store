@@ -37,7 +37,7 @@ export default function Header({ page, setPage }) {
           </div>
           <div style={{ textAlign: "left" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a", letterSpacing: "0.04em" }}>
-              Your Company
+              Rogers & Hollands | Ashcroft & Oak
             </div>
             <div style={{ fontSize: 10, color: "#A22325", letterSpacing: "0.16em", textTransform: "uppercase", marginTop: 1, fontWeight: 600 }}>
               Associate Store
