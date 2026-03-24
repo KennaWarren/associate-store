@@ -13,12 +13,29 @@ const STATUS_COLORS  = {
 const CATEGORIES = ["Apparel","Accessories","Drinkware","Bags","Office","Other"];
 const TABS = ["orders","products","coupons"];
 
-/* ─── Convert file to base64 data URL ─── */
-function fileToBase64(file) {
+/* ─── Compress + resize image to max 800px, ~80KB output ─── */
+function compressImage(file, maxDim = 800, quality = 0.82) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload  = () => resolve(reader.result);
     reader.onerror = reject;
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        // Calculate new dimensions keeping aspect ratio
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else                 { width  = Math.round(width  * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width  = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = e.target.result;
+    };
     reader.readAsDataURL(file);
   });
 }
@@ -26,29 +43,56 @@ function fileToBase64(file) {
 /* ─── Reusable image upload button ─── */
 function ImageUploader({ value, onChange, label = "Upload Image", small = false }) {
   const ref = useRef();
+  const [compressing, setCompressing] = useState(false);
+
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert("Image must be under 2 MB."); return; }
-    const b64 = await fileToBase64(file);
-    onChange(b64);
+    // Accept any size — we'll compress it down
+    if (file.size > 20 * 1024 * 1024) { alert("Image must be under 20 MB."); return; }
+    setCompressing(true);
+    try {
+      const compressed = await compressImage(file);
+      onChange(compressed);
+    } catch (err) {
+      alert("Could not process image. Please try a different file.");
+    } finally {
+      setCompressing(false);
+      // Reset input so same file can be re-selected if needed
+      e.target.value = "";
+    }
   };
 
   return (
     <div>
       <input ref={ref} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }} />
-      {value ? (
+      {compressing ? (
+        <div style={{
+          width: small ? 72 : "100%", height: small ? 72 : 120,
+          border:"2px dashed #EAEAEA", borderRadius: small ? 10 : 12,
+          background:"#F7F7F7", display:"flex", alignItems:"center", justifyContent:"center",
+        }}>
+          <span style={{ fontSize:12, color:"#A22325", fontWeight:600 }}>Compressing…</span>
+        </div>
+      ) : value ? (
         <div style={{ position:"relative", display:"inline-block" }}>
-          <img src={value} alt="preview" style={{
+          <div style={{
             width: small ? 72 : "100%",
             height: small ? 72 : 160,
-            objectFit:"cover",
             borderRadius: small ? 8 : 12,
             border:"1.5px solid #EAEAEA",
-            display:"block",
-          }} />
+            background:"#F7F7F7",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            overflow:"hidden",
+          }}>
+            <img src={value} alt="preview" style={{
+              maxWidth:"100%", maxHeight:"100%",
+              objectFit:"contain",
+              display:"block",
+            }} />
+          </div>
           <button onClick={() => onChange("")} style={{
-            position:"absolute", top: -8, right: -8,
+            position:"absolute", top:-8, right:-8,
             background:"#A22325", color:"#fff",
             border:"none", borderRadius:"50%",
             width:22, height:22, fontSize:13, cursor:"pointer",
@@ -56,8 +100,7 @@ function ImageUploader({ value, onChange, label = "Upload Image", small = false 
             boxShadow:"0 2px 6px rgba(0,0,0,0.2)",
           }}>×</button>
           <button onClick={() => ref.current.click()} style={{
-            marginTop: small ? 4 : 8,
-            display:"block",
+            marginTop: small ? 4 : 8, display:"block",
             fontSize:11, color:"#A22325", fontWeight:600,
             background:"none", border:"none", cursor:"pointer", padding:0,
           }}>Change</button>
@@ -68,8 +111,7 @@ function ImageUploader({ value, onChange, label = "Upload Image", small = false 
           height: small ? 72 : 120,
           border:"2px dashed #EAEAEA",
           borderRadius: small ? 10 : 12,
-          background:"#F7F7F7",
-          cursor:"pointer",
+          background:"#F7F7F7", cursor:"pointer",
           display:"flex", flexDirection:"column",
           alignItems:"center", justifyContent:"center",
           gap:6, transition:"border-color 0.15s",
@@ -79,7 +121,7 @@ function ImageUploader({ value, onChange, label = "Upload Image", small = false 
         >
           <span style={{ fontSize: small ? 18 : 24 }}>📷</span>
           {!small && <span style={{ fontSize:12, color:"#bbb", fontWeight:500 }}>{label}</span>}
-          {!small && <span style={{ fontSize:11, color:"#ddd" }}>PNG, JPG — max 2MB</span>}
+          {!small && <span style={{ fontSize:11, color:"#ddd" }}>PNG, JPG — any size</span>}
         </button>
       )}
     </div>
