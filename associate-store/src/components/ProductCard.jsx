@@ -38,17 +38,18 @@ export default function ProductCard({ product, onClick }) {
     >
       {/* Image area */}
       <div style={{
-        background: product.image ? "#F7F7F7" : accentBg,
+        background: "#F7F7F7",
         height: 200,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
         overflow: "hidden",
+        padding: product.image ? "8px" : 0,
       }}>
         {product.image ? (
           <img src={product.image} alt={product.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }} />
         ) : (
           <span style={{ fontSize: 56 }}>{emoji}</span>
         )}
@@ -109,4 +110,3 @@ export default function ProductCard({ product, onClick }) {
     </article>
   );
 }
-
