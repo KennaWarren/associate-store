@@ -45,7 +45,7 @@ export default function ShopPage({ setPage }) {
             fontSize: 11, fontWeight: 700,
             letterSpacing: "0.18em", textTransform: "uppercase",
             padding: "6px 16px", borderRadius: 20, marginBottom: 24,
-          }}>Associates Only</span>
+          }}>WELCOME TO</span>
 
           <h1 style={{
             fontFamily: "'Georgia', serif",
