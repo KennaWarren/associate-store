@@ -5,7 +5,6 @@ import { categoryEmoji, formatCurrency } from "../data/utils";
 const categoryAccents = {
   Apparel:     "#FFF0F0",
   Accessories: "#F0FFF4",
-  Drinkware:   "#F0F4FF",
   Bags:        "#FFF8F0",
   Office:      "#F5F0FF",
 };
@@ -83,8 +82,7 @@ export default function ProductDetailPage({ product, onBack, setPage }) {
           <div>
             {/* Main image */}
             <div style={{
-              background: activeImage ? "#F7F7F7" : accentBg,
-              borderRadius:20,
+              background: activeImage ? "#F7F7F7" : accentBg,              borderRadius:20,
               aspectRatio:"1/1",
               display:"flex", alignItems:"center", justifyContent:"center",
               overflow:"hidden", position:"relative",
@@ -97,7 +95,7 @@ export default function ProductDetailPage({ product, onBack, setPage }) {
                   key={activeImage}
                   src={activeImage}
                   alt={product.name}
-                  style={{ width:"100%", height:"100%", objectFit:"cover", animation:"imgFadeIn 0.25s ease" }}
+                  style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain", padding:"12px", animation:"imgFadeIn 0.25s ease" }}
                 />
               ) : (
                 <span style={{ fontSize:110 }}>{emoji}</span>
