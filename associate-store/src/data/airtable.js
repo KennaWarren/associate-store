@@ -2,7 +2,7 @@
 //  AIRTABLE CONFIGURATION
 //  Replace the two values below with your real credentials
 // ============================================================
-const AIRTABLE_TOKEN   = "YOUR_NEW_TOKEN_HERE";  // ← paste your new token here
+const AIRTABLE_TOKEN   = "pataeDZaj5AE4CQzG.2d7eab083442345f69d75bbdb3a35bb0c742c42a2b675bc91ee6e0e2e050b7d2";
 const AIRTABLE_BASE_ID = "app9AoQVdrFHNYj5p";
 
 const BASE_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
