@@ -9,6 +9,8 @@ export default function CartPage({ setPage }) {
 
   const [step, setStep]               = useState("cart");
   const [lastOrder, setLastOrder]     = useState(null);
+  const [submitting, setSubmitting]   = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponMsg, setCouponMsg]     = useState(null);
   const [form, setForm]               = useState({ name:"", email:"", department:"", paymentMethod:"venmo", notes:"" });
@@ -32,11 +34,19 @@ export default function CartPage({ setPage }) {
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
-    const order = placeOrder(form);
-    setLastOrder(order);
-    setStep("confirm");
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const order = await placeOrder(form);
+      setLastOrder(order);
+      setStep("confirm");
+    } catch (e) {
+      setSubmitError("Something went wrong placing your order. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const selectedPayment = paymentMethods.find(m => m.id === form.paymentMethod);
@@ -337,7 +347,12 @@ export default function CartPage({ setPage }) {
               )}
               {step === "checkout" && (
                 <>
-                  <button onClick={handleSubmit} style={primaryBtn}>Place Order</button>
+                  {submitError && (
+                    <p style={{ fontSize:13, color:"#A22325", textAlign:"center", marginBottom:4 }}>{submitError}</p>
+                  )}
+                  <button onClick={handleSubmit} disabled={submitting} style={{ ...primaryBtn, opacity: submitting ? 0.7 : 1, cursor: submitting ? "not-allowed" : "pointer" }}>
+                    {submitting ? "Placing Order…" : "Place Order"}
+                  </button>
                   <button onClick={() => setStep("cart")} style={secondaryBtn}>← Back to Cart</button>
                 </>
               )}
