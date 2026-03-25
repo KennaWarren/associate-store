@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useStore } from "../context/StoreContext";
 import { formatCurrency, formatDate } from "../data/utils";
 import { paymentMethods } from "../data/products";
@@ -162,7 +162,7 @@ export default function AdminPage() {
    ORDERS TAB
 ══════════════════════════════════════ */
 function OrdersTab() {
-  const { orders, updateOrder, deleteOrder } = useStore();
+  const { orders, updateOrder, deleteOrder, ordersLoading, ordersError, loadOrders } = useStore();
   const [filter, setFilter]         = useState("all");
   const [paidFilter, setPaidFilter] = useState("all");
   const [search, setSearch]         = useState("");
@@ -206,10 +206,26 @@ function OrdersTab() {
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:28, flexWrap:"wrap", gap:12 }}>
         <div>
           <h2 style={{ fontFamily:"'Georgia', serif", fontSize:26, color:"#1a1a1a", marginBottom:4 }}>Orders</h2>
-          <p style={{ color:"#bbb", fontSize:13 }}>{orders.length} total orders</p>
+          <p style={{ color:"#bbb", fontSize:13 }}>{ordersLoading ? "Loading…" : `${orders.length} total orders`}</p>
         </div>
-        <button onClick={exportCSV} style={actionBtn("#1a1a1a")}>↓ Export CSV</button>
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={loadOrders} style={actionBtn("#666")} title="Refresh orders from Airtable">↻ Refresh</button>
+          <button onClick={exportCSV} style={actionBtn("#1a1a1a")}>↓ Export CSV</button>
+        </div>
       </div>
+
+      {ordersError && (
+        <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:10, padding:"12px 16px", marginBottom:20, fontSize:13, color:"#991B1B" }}>
+          Could not load orders from Airtable: {ordersError}. Check your token in <code>src/data/airtable.js</code>.
+        </div>
+      )}
+
+      {ordersLoading ? (
+        <div style={{ textAlign:"center", padding:"60px 0" }}>
+          <div style={{ fontSize:32, marginBottom:12 }}>⏳</div>
+          <p style={{ color:"#bbb", fontSize:15 }}>Loading orders…</p>
+        </div>
+      ) : (<>
 
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(190px, 1fr))", gap:16, marginBottom:28 }}>
         <StatCard label="Total Orders"  value={orders.length} sub={`${orders.filter(o=>o.status==="pending").length} pending`} />
@@ -294,6 +310,7 @@ function OrdersTab() {
           })}
         </div>
       )}
+      </>)}
     </div>
   );
 }
@@ -304,7 +321,7 @@ function OrdersTab() {
 const emptyProduct = { name:"", description:"", price:"", category:"Apparel", image:"", variants:{}, variantImages:{} };
 
 function ProductsTab() {
-  const { products, addProduct, updateProduct, deleteProduct } = useStore();
+  const { products, addProduct, updateProduct, deleteProduct, productsLoading, productsError, loadProducts } = useStore();
   const [editing, setEditing]         = useState(null);
   const [form, setForm]               = useState(emptyProduct);
   const [variantKey, setVariantKey]   = useState("");
@@ -344,11 +361,15 @@ function ProductsTab() {
     return form.variantImages?.[`${variantKey}:${optionValue}`] || "";
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim() || !form.price) { setMsg("Name and price are required."); return; }
     const data = { ...form, price:parseFloat(form.price) };
-    if (editing === "new") addProduct(data); else updateProduct(editing, data);
-    close();
+    try {
+      if (editing === "new") await addProduct(data); else await updateProduct(editing, data);
+      close();
+    } catch (e) {
+      setMsg("Could not save product. Please try again.");
+    }
   };
 
   return (
@@ -356,10 +377,18 @@ function ProductsTab() {
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:28 }}>
         <div>
           <h2 style={{ fontFamily:"'Georgia', serif", fontSize:26, color:"#1a1a1a", marginBottom:4 }}>Products</h2>
-          <p style={{ color:"#bbb", fontSize:13 }}>{products.length} products</p>
+          <p style={{ color:"#bbb", fontSize:13 }}>{productsLoading ? "Loading…" : `${products.length} products`}</p>
         </div>
-        <button onClick={openNew} style={actionBtn("#A22325")}>+ Add Product</button>
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={loadProducts} style={actionBtn("#666")}>↻ Refresh</button>
+          <button onClick={openNew} style={actionBtn("#A22325")}>+ Add Product</button>
+        </div>
       </div>
+      {productsError && (
+        <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:10, padding:"12px 16px", marginBottom:20, fontSize:13, color:"#991B1B" }}>
+          Could not load products: {productsError}
+        </div>
+      )}
 
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:18 }}>
         {products.map(p => (
