@@ -15,6 +15,8 @@ export default function CartPage({ setPage }) {
   const [couponMsg, setCouponMsg]     = useState(null);
   const [form, setForm]               = useState({ name:"", email:"", department:"", paymentMethod:"venmo", notes:"" });
   const [errors, setErrors]           = useState({});
+  const [showPayrollModal, setShowPayrollModal] = useState(false);
+  const [payrollAgreed, setPayrollAgreed]       = useState(false);
 
   const validate = () => {
     const e = {};
@@ -36,6 +38,27 @@ export default function CartPage({ setPage }) {
 
   const handleSubmit = async () => {
     if (!validate()) return;
+    // If payroll deduction selected, show agreement modal first
+    if (form.paymentMethod === "payroll" && !payrollAgreed) {
+      setShowPayrollModal(true);
+      return;
+    }
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const order = await placeOrder(form);
+      setLastOrder(order);
+      setStep("confirm");
+    } catch (e) {
+      setSubmitError("Something went wrong placing your order. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePayrollAgree = async () => {
+    setShowPayrollModal(false);
+    setPayrollAgreed(true);
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -158,6 +181,72 @@ export default function CartPage({ setPage }) {
 
   return (
     <div style={{ background: "#F7F7F7", minHeight: "100vh", padding: "48px 24px" }}>
+
+      {/* ── Payroll Deduction Agreement Modal ── */}
+      {showPayrollModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+          backdropFilter: "blur(3px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 500, padding: 24,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 20, padding: "40px 36px",
+            maxWidth: 500, width: "100%",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.15)",
+          }}>
+            <div style={{ width: 52, height: 52, background: "#FFF0F0", border: "2px solid rgba(162,35,37,0.15)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 22 }}>📋</div>
+            <h2 style={{ fontFamily: "'Georgia', serif", fontSize: 22, color: "#1a1a1a", marginBottom: 12, textAlign: "center" }}>
+              Payroll Deduction Agreement
+            </h2>
+            <div style={{ background: "#F7F7F7", border: "1px solid #EAEAEA", borderRadius: 12, padding: "18px 20px", marginBottom: 24, fontSize: 14, color: "#444", lineHeight: 1.75 }}>
+              <p style={{ marginBottom: 10 }}>By selecting Payroll Deduction as your payment method, you authorize your employer to deduct the total amount of <strong style={{ color: "#A22325" }}>{formatCurrency(cartTotal)}</strong> from your upcoming paycheck.</p>
+              <p style={{ marginBottom: 10 }}>You understand that:</p>
+              <ul style={{ paddingLeft: 20, marginBottom: 10 }}>
+                <li>The deduction will appear on your next available pay period</li>
+                <li>This authorization is for this purchase only</li>
+                <li>Once submitted, this order cannot be cancelled without HR approval</li>
+                <li>Questions should be directed to your HR department</li>
+              </ul>
+              <p>This deduction is voluntary and has been requested by you, the employee.</p>
+            </div>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer", marginBottom: 24 }}>
+              <input
+                type="checkbox"
+                checked={payrollAgreed}
+                onChange={e => setPayrollAgreed(e.target.checked)}
+                style={{ accentColor: "#A22325", width: 18, height: 18, marginTop: 2, flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 14, color: "#333", lineHeight: 1.6 }}>
+                I have read and agree to the payroll deduction terms above. I authorize the deduction of <strong>{formatCurrency(cartTotal)}</strong> from my paycheck.
+              </span>
+            </label>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={handlePayrollAgree}
+                disabled={!payrollAgreed}
+                style={{
+                  flex: 1, background: payrollAgreed ? "#A22325" : "#EAEAEA",
+                  color: payrollAgreed ? "#fff" : "#aaa",
+                  border: "none", borderRadius: 12, padding: "14px",
+                  fontSize: 14, fontWeight: 700, cursor: payrollAgreed ? "pointer" : "not-allowed",
+                  transition: "background 0.2s",
+                  boxShadow: payrollAgreed ? "0 4px 16px rgba(162,35,37,0.3)" : "none",
+                }}
+              >
+                Agree & Place Order
+              </button>
+              <button
+                onClick={() => { setShowPayrollModal(false); setPayrollAgreed(false); }}
+                style={{ flex: 1, background: "#F7F7F7", color: "#666", border: "1.5px solid #EAEAEA", borderRadius: 12, padding: "14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <h1 style={{ fontFamily: "'Georgia', serif", fontSize: 30, color: "#1a1a1a", marginBottom: 36, letterSpacing: "-0.01em" }}>
           {step === "cart" ? "Your Cart" : "Checkout"}
@@ -271,7 +360,7 @@ export default function CartPage({ setPage }) {
                   <Field label="Work Email" error={errors.email}>
                     <input value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} style={inp(errors.email)} placeholder="jane@company.com" type="email" />
                   </Field>
-                  <Field label="Store Number" error={errors.department}>
+                  <Field label="Department" error={errors.department}>
                     <input value={form.department} onChange={e => setForm(f => ({...f, department: e.target.value}))} style={inp(errors.department)} placeholder="Marketing, Engineering, etc." />
                   </Field>
                   <Field label="Payment Method">
