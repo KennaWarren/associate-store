@@ -1,7 +1,3 @@
-// ============================================================
-//  AIRTABLE CONFIGURATION
-//  Replace the two values below with your real credentials
-// ============================================================
 const AIRTABLE_TOKEN   = "pataeDZaj5AE4CQzG.2d7eab083442345f69d75bbdb3a35bb0c742c42a2b675bc91ee6e0e2e050b7d2";
 const AIRTABLE_BASE_ID = "app9AoQVdrFHNYj5p";
 
@@ -12,15 +8,11 @@ const headers = {
   "Content-Type":  "application/json",
 };
 
-// ── Generic helpers ──────────────────────────────────────────
-
 async function fetchAll(table) {
   let records = [];
   let offset  = null;
   do {
-    const url = offset
-      ? `${BASE_URL}/${table}?offset=${offset}`
-      : `${BASE_URL}/${table}`;
+    const url  = offset ? `${BASE_URL}/${table}?offset=${offset}` : `${BASE_URL}/${table}`;
     const res  = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error?.message || "Airtable fetch failed");
@@ -32,9 +24,8 @@ async function fetchAll(table) {
 
 async function createRecord(table, fields) {
   const res  = await fetch(`${BASE_URL}/${table}`, {
-    method:  "POST",
-    headers,
-    body:    JSON.stringify({ fields }),
+    method: "POST", headers,
+    body: JSON.stringify({ fields }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Airtable create failed");
@@ -43,9 +34,8 @@ async function createRecord(table, fields) {
 
 async function updateRecord(table, recordId, fields) {
   const res  = await fetch(`${BASE_URL}/${table}/${recordId}`, {
-    method:  "PATCH",
-    headers,
-    body:    JSON.stringify({ fields }),
+    method: "PATCH", headers,
+    body: JSON.stringify({ fields }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Airtable update failed");
@@ -53,16 +43,11 @@ async function updateRecord(table, recordId, fields) {
 }
 
 async function deleteRecord(table, recordId) {
-  const res = await fetch(`${BASE_URL}/${table}/${recordId}`, {
-    method:  "DELETE",
-    headers,
-  });
+  const res  = await fetch(`${BASE_URL}/${table}/${recordId}`, { method: "DELETE", headers });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Airtable delete failed");
   return data;
 }
-
-// ── ORDERS ───────────────────────────────────────────────────
 
 export async function fetchOrders() {
   const records = await fetchAll("Orders");
@@ -75,7 +60,7 @@ export async function fetchOrders() {
     department:    r.fields.Department    || "",
     paymentMethod: r.fields.PaymentMethod || "",
     notes:         r.fields.Notes         || "",
-    items:         JSON.parse(r.fields.Items     || "[]"),
+    items:         JSON.parse(r.fields.Items || "[]"),
     subtotal:      r.fields.Subtotal      || 0,
     discount:      r.fields.Discount      || 0,
     couponCode:    r.fields.CouponCode    || null,
@@ -116,20 +101,18 @@ export async function deleteOrder(recordId) {
   return deleteRecord("Orders", recordId);
 }
 
-// ── PRODUCTS ─────────────────────────────────────────────────
-
 export async function fetchProducts() {
   const records = await fetchAll("Products");
   return records.map(r => ({
     _recordId:     r.id,
-    id:            r.fields.ProductId || r.id,
-    name:          r.fields.Name          || "",
-    description:   r.fields.Description   || "",
-    price:         r.fields.Price         || 0,
-    cost:          r.fields.Cost          || 0,
-    category:      r.fields.Category      || "Other",
+    id:            r.fields.ProductId    || r.id,
+    name:          r.fields.Name         || "",
+    description:   r.fields.Description  || "",
+    price:         r.fields.Price        || 0,
+    cost:          r.fields.Cost         || 0,
+    category:      r.fields.Category     || "Other",
     variants:      JSON.parse(r.fields.Variants      || "{}"),
-    image:         r.fields.Image         || "",
+    image:         r.fields.Image        || "",
     variantImages: JSON.parse(r.fields.VariantImages || "{}"),
   }));
 }
@@ -162,8 +145,5 @@ export async function updateProduct(recordId, changes) {
 }
 
 export async function deleteProduct(recordId) {
-  return deleteRecord("Products", recordId);
-}
-
   return deleteRecord("Products", recordId);
 }
