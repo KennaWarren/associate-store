@@ -126,6 +126,7 @@ export async function fetchProducts() {
     name:          r.fields.Name          || "",
     description:   r.fields.Description   || "",
     price:         r.fields.Price         || 0,
+    cost:          r.fields.Cost          || 0,
     category:      r.fields.Category      || "Other",
     variants:      JSON.parse(r.fields.Variants      || "{}"),
     image:         r.fields.Image         || "",
@@ -139,6 +140,7 @@ export async function createProduct(product) {
     Name:          product.name,
     Description:   product.description   || "",
     Price:         product.price,
+    Cost:          product.cost          || 0,
     Category:      product.category      || "Other",
     Variants:      JSON.stringify(product.variants      || {}),
     Image:         product.image         || "",
@@ -151,6 +153,7 @@ export async function updateProduct(recordId, changes) {
   if (changes.name          !== undefined) fields.Name          = changes.name;
   if (changes.description   !== undefined) fields.Description   = changes.description;
   if (changes.price         !== undefined) fields.Price         = changes.price;
+  if (changes.cost          !== undefined) fields.Cost          = changes.cost;
   if (changes.category      !== undefined) fields.Category      = changes.category;
   if (changes.variants      !== undefined) fields.Variants      = JSON.stringify(changes.variants);
   if (changes.image         !== undefined) fields.Image         = changes.image;
@@ -159,5 +162,8 @@ export async function updateProduct(recordId, changes) {
 }
 
 export async function deleteProduct(recordId) {
+  return deleteRecord("Products", recordId);
+}
+
   return deleteRecord("Products", recordId);
 }
