@@ -360,7 +360,7 @@ export default function CartPage({ setPage }) {
                   <Field label="Work Email" error={errors.email}>
                     <input value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} style={inp(errors.email)} placeholder="jane@company.com" type="email" />
                   </Field>
-                  <Field label="Department" error={errors.department}>
+                  <Field label="Store Number" error={errors.department}>
                     <input value={form.department} onChange={e => setForm(f => ({...f, department: e.target.value}))} style={inp(errors.department)} placeholder="Marketing, Engineering, etc." />
                   </Field>
                   <Field label="Payment Method">
