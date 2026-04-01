@@ -169,6 +169,99 @@ function OrdersTab() {
   const [expanded, setExpanded]     = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
 
+  const printPackingSlip = (order, payMethod) => {
+    const itemRows = order.items.map(item => {
+      const variants = Object.entries(item.variants || {}).map(([,v]) => v).join(", ");
+      return `
+        <tr>
+          <td style="padding:10px 8px;border-bottom:1px solid #eee;font-size:14px;">
+            ${item.productName}${variants ? ` <span style="color:#888;font-size:12px;">(${variants})</span>` : ""}
+          </td>
+          <td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:center;font-size:14px;">${item.qty}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:right;font-size:14px;">$${item.price.toFixed(2)}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:right;font-size:14px;font-weight:600;">$${item.subtotal.toFixed(2)}</td>
+        </tr>`;
+    }).join("");
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Packing Slip — ${order.id}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1a1a1a; padding: 40px; max-width: 680px; margin: 0 auto; }
+    @media print { body { padding: 20px; } .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #A22325;">
+    <div>
+      <h1 style="font-family:Georgia,serif;font-size:28px;color:#1a1a1a;margin-bottom:4px;">Packing Slip</h1>
+      <p style="font-size:12px;color:#888;letter-spacing:0.08em;text-transform:uppercase;">Associate Store</p>
+    </div>
+    <div style="text-align:right;">
+      <p style="font-size:13px;font-family:monospace;color:#A22325;font-weight:700;margin-bottom:4px;">${order.id}</p>
+      <p style="font-size:12px;color:#888;">${new Date(order.date).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+    <div style="background:#F7F7F7;border-radius:10px;padding:16px 20px;">
+      <p style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#bbb;margin-bottom:10px;">Ship To</p>
+      <p style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:4px;">${order.name}</p>
+      <p style="font-size:13px;color:#555;margin-bottom:2px;">${order.email}</p>
+      <p style="font-size:13px;color:#555;">Store #: ${order.department}</p>
+    </div>
+    <div style="background:#F7F7F7;border-radius:10px;padding:16px 20px;">
+      <p style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#bbb;margin-bottom:10px;">Payment</p>
+      <p style="font-size:13px;color:#555;margin-bottom:2px;">${payMethod?.label || order.paymentMethod}</p>
+      <p style="font-size:12px;color:#bbb;">Status: ${order.paid ? "✓ Paid" : "Pending"}</p>
+    </div>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+    <thead>
+      <tr style="background:#1a1a1a;">
+        <th style="padding:10px 8px;text-align:left;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#fff;">Item</th>
+        <th style="padding:10px 8px;text-align:center;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#fff;">Qty</th>
+        <th style="padding:10px 8px;text-align:right;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#fff;">Unit Price</th>
+        <th style="padding:10px 8px;text-align:right;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#fff;">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>${itemRows}</tbody>
+  </table>
+
+  <div style="display:flex;justify-content:flex-end;">
+    <div style="width:240px;">
+      ${order.discount > 0 ? `
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#555;margin-bottom:6px;">
+        <span>Discount (${order.couponCode})</span><span style="color:#166534;">−$${(order.discount||0).toFixed(2)}</span>
+      </div>` : ""}
+      <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;color:#1a1a1a;padding-top:10px;border-top:2px solid #1a1a1a;">
+        <span>Total</span><span style="color:#A22325;">$${order.total.toFixed(2)}</span>
+      </div>
+    </div>
+  </div>
+
+  ${order.notes ? `<div style="margin-top:24px;padding:14px 18px;background:#FFFBF5;border:1px solid #F5E0C0;border-radius:10px;"><p style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#A22325;margin-bottom:6px;">Notes</p><p style="font-size:13px;color:#555;">${order.notes}</p></div>` : ""}
+
+  <div style="margin-top:40px;padding-top:20px;border-top:1px solid #EAEAEA;text-align:center;">
+    <p style="font-size:11px;color:#ccc;letter-spacing:0.06em;">Thank you — Associate Store · Internal Use Only</p>
+  </div>
+
+  <div class="no-print" style="margin-top:32px;text-align:center;">
+    <button onclick="window.print()" style="background:#A22325;color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.06em;">Print</button>
+  </div>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank", "width=720,height=900");
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+  };
+
   const filtered = orders.filter(o => {
     if (filter !== "all" && o.status !== filter) return false;
     if (paidFilter === "paid"   && !o.paid) return false;
@@ -294,15 +387,21 @@ function OrdersTab() {
                         </div>
                       ))}
                     </div>
-                    {confirmDel===order.id ? (
-                      <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                        <span style={{fontSize:13,color:"#A22325",fontWeight:500}}>Delete this order?</span>
-                        <button onClick={()=>{deleteOrder(order.id);setConfirmDel(null);}} style={smBtn("#A22325")}>Yes, delete</button>
-                        <button onClick={()=>setConfirmDel(null)} style={smBtn("#888")}>Cancel</button>
-                      </div>
-                    ) : (
-                      <button onClick={()=>setConfirmDel(order.id)} style={smBtn("#EAEAEA","#999")}>Delete Order</button>
-                    )}
+                    {/* Action buttons */}
+                    <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+                      <button onClick={() => printPackingSlip(order, payMethod)} style={{ ...smBtn("#1a1a1a"), display:"flex", alignItems:"center", gap:6 }}>
+                        🖨️ Print Packing Slip
+                      </button>
+                      {confirmDel===order.id ? (
+                        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                          <span style={{fontSize:13,color:"#A22325",fontWeight:500}}>Delete this order?</span>
+                          <button onClick={()=>{deleteOrder(order.id);setConfirmDel(null);}} style={smBtn("#A22325")}>Yes, delete</button>
+                          <button onClick={()=>setConfirmDel(null)} style={smBtn("#888")}>Cancel</button>
+                        </div>
+                      ) : (
+                        <button onClick={()=>setConfirmDel(order.id)} style={smBtn("#EAEAEA","#999")}>Delete Order</button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -318,7 +417,7 @@ function OrdersTab() {
 /* ══════════════════════════════════════
    PRODUCTS TAB
 ══════════════════════════════════════ */
-const emptyProduct = { name:"", description:"", price:"", category:"Apparel", image:"", variants:{}, variantImages:{} };
+const emptyProduct = { name:"", description:"", price:"", cost:"", category:"Apparel", image:"", variants:{}, variantImages:{} };
 
 function ProductsTab() {
   const { products, addProduct, updateProduct, deleteProduct, productsLoading, productsError, loadProducts } = useStore();
@@ -331,7 +430,7 @@ function ProductsTab() {
 
   const openNew  = () => { setForm(emptyProduct); setEditing("new"); setVariantKey(""); setVariantVals(""); };
   const openEdit = (p) => {
-    setForm({ ...p, price:String(p.price), image:p.image||"", variants:p.variants||{}, variantImages:p.variantImages||{} });
+    setForm({ ...p, price:String(p.price), cost:String(p.cost||""), image:p.image||"", variants:p.variants||{}, variantImages:p.variantImages||{} });
     setEditing(p.id); setVariantKey(""); setVariantVals("");
   };
   const close = () => { setEditing(null); setMsg(""); };
@@ -345,14 +444,12 @@ function ProductsTab() {
   const removeVariant = (key) => {
     setForm(f => {
       const v = {...f.variants}; delete v[key];
-      // Also clean up any variant images for this key
       const vi = {...f.variantImages};
       Object.keys(vi).forEach(k => { if (k.startsWith(key+":")) delete vi[k]; });
       return {...f, variants:v, variantImages:vi};
     });
   };
 
-  // variantImages are keyed as "VariantKey:OptionValue" e.g. "Color:Red"
   const setVariantImage = (variantKey, optionValue, imageData) => {
     const key = `${variantKey}:${optionValue}`;
     setForm(f => ({ ...f, variantImages: { ...f.variantImages, [key]: imageData } }));
@@ -363,7 +460,7 @@ function ProductsTab() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.price) { setMsg("Name and price are required."); return; }
-    const data = { ...form, price:parseFloat(form.price) };
+    const data = { ...form, price:parseFloat(form.price), cost:parseFloat(form.cost||0) };
     try {
       if (editing === "new") await addProduct(data); else await updateProduct(editing, data);
       close();
@@ -399,7 +496,10 @@ function ProductsTab() {
             <div style={{ padding:"16px 18px" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
                 <p style={{ fontWeight:600, fontSize:14, color:"#1a1a1a", flex:1, marginRight:8 }}>{p.name}</p>
-                <span style={{ fontWeight:800, color:"#A22325", fontSize:14, whiteSpace:"nowrap" }}>{formatCurrency(p.price)}</span>
+                <div style={{ textAlign:"right" }}>
+                  <span style={{ fontWeight:800, color:"#A22325", fontSize:14, display:"block" }}>{formatCurrency(p.price)}</span>
+                  {p.cost > 0 && <span style={{ fontSize:11, color:"#bbb" }}>Cost: {formatCurrency(p.cost)}</span>}
+                </div>
               </div>
               <p style={{ fontSize:12, color:"#bbb", marginBottom:4 }}>{p.category}</p>
               <p style={{ fontSize:12, color:"#ccc", marginBottom:12, lineHeight:1.5 }}>{p.description?.slice(0,80)}{p.description?.length>80?"…":""}</p>
@@ -445,15 +545,18 @@ function ProductsTab() {
               </PField>
 
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                <PField label="Price ($) *">
+                <PField label="Sell Price ($) *">
                   <input type="number" min="0" step="0.01" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} style={pInp} placeholder="0.00" />
                 </PField>
-                <PField label="Category">
-                  <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={pInp}>
-                    {CATEGORIES.map(c=><option key={c}>{c}</option>)}
-                  </select>
+                <PField label="Cost ($) — Admin only">
+                  <input type="number" min="0" step="0.01" value={form.cost||""} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} style={{...pInp, borderColor:"#F5E0C0", background:"#FFFBF5"}} placeholder="0.00" />
                 </PField>
               </div>
+              <PField label="Category">
+                <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={pInp}>
+                  {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+                </select>
+              </PField>
 
               {/* Main product image */}
               <PField label="Main Product Image">
