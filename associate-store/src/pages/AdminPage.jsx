@@ -14,7 +14,7 @@ const CATEGORIES = ["Apparel","Accessories","Drinkware","Bags","Office","Other"]
 const TABS = ["orders","products","coupons","suggestions"];
 
 /* ─── Image compression ─── */
-function compressImage(file, maxDim=800, quality=0.82) {
+function compressImage(file, maxDim=600, quality=0.65) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;
