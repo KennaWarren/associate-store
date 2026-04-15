@@ -135,7 +135,7 @@ export function StoreProvider({ children }) {
       couponCode:    appliedCoupon?.code || null,
       total:         cartTotal,
       status:        "pending",
-      paid:          isPayroll, // payroll deduction = auto-paid
+      paid:          true, // payroll deduction = auto-paid
     };
     const created     = await atCreateOrder(order);
     const withRecord  = { ...order, _recordId: created.id };
