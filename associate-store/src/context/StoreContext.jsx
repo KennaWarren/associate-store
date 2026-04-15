@@ -1,19 +1,23 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { products as defaultProducts } from "../data/products";
 import {
-  fetchOrders   as atFetchOrders,
-  createOrder   as atCreateOrder,
-  updateOrder   as atUpdateOrder,
-  deleteOrder   as atDeleteOrder,
-  fetchProducts as atFetchProducts,
-  createProduct as atCreateProduct,
-  updateProduct as atUpdateProduct,
-  deleteProduct as atDeleteProduct,
+  fetchOrders      as atFetchOrders,
+  createOrder      as atCreateOrder,
+  updateOrder      as atUpdateOrder,
+  deleteOrder      as atDeleteOrder,
+  fetchProducts    as atFetchProducts,
+  createProduct    as atCreateProduct,
+  updateProduct    as atUpdateProduct,
+  deleteProduct    as atDeleteProduct,
+  fetchSuggestions as atFetchSuggestions,
+  createSuggestion as atCreateSuggestion,
+  updateSuggestion as atUpdateSuggestion,
+  deleteSuggestion as atDeleteSuggestion,
+  sendPayrollEmail,
 } from "../data/airtable";
 
 const StoreContext = createContext(null);
-
-const COUPONS_KEY = "associate_store_coupons";
+const COUPONS_KEY  = "associate_store_coupons";
 
 function load(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
@@ -21,34 +25,32 @@ function load(key, fallback) {
 }
 
 export function StoreProvider({ children }) {
-  const [cart, setCart]             = useState([]);
-  const [orders, setOrders]         = useState([]);
-  const [products, setProducts]     = useState([]);
-  const [coupons, setCoupons]       = useState(() => load(COUPONS_KEY, [
-    { id: "c1", code: "WELCOME10", type: "percent", value: 10, active: true, description: "10% off entire order" },
-    { id: "c2", code: "SAVE5",     type: "fixed",   value: 5,  active: true, description: "$5 off entire order" },
+  const [cart, setCart]               = useState([]);
+  const [orders, setOrders]           = useState([]);
+  const [products, setProducts]       = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [coupons, setCoupons]         = useState(() => load(COUPONS_KEY, [
+    { id:"c1", code:"WELCOME10", type:"percent", value:10, active:true, description:"10% off entire order" },
+    { id:"c2", code:"SAVE5",     type:"fixed",   value:5,  active:true, description:"$5 off entire order" },
   ]));
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [ordersLoading,  setOrdersLoading]  = useState(true);
-  const [productsLoading, setProductsLoading] = useState(true);
-  const [ordersError,   setOrdersError]   = useState(null);
-  const [productsError, setProductsError] = useState(null);
 
-  // Persist coupons locally — they're admin-configured and lightweight
+  const [ordersLoading,      setOrdersLoading]      = useState(true);
+  const [productsLoading,    setProductsLoading]     = useState(true);
+  const [suggestionsLoading, setSuggestionsLoading]  = useState(true);
+  const [ordersError,        setOrdersError]         = useState(null);
+  const [productsError,      setProductsError]       = useState(null);
+
   useEffect(() => {
     try { localStorage.setItem(COUPONS_KEY, JSON.stringify(coupons)); } catch {}
   }, [coupons]);
 
-  // ── Load products from Airtable on mount ──
   const loadProducts = useCallback(async () => {
-    setProductsLoading(true);
-    setProductsError(null);
+    setProductsLoading(true); setProductsError(null);
     try {
       const data = await atFetchProducts();
-      // If no products in Airtable yet, seed with defaults (no images)
       if (data.length === 0) {
-        const seeds = defaultProducts.map(p => ({ ...p, image: "", variantImages: {} }));
-        // Create them all in Airtable
+        const seeds = defaultProducts.map(p => ({ ...p, image:"", variantImages:{} }));
         await Promise.all(seeds.map(p => atCreateProduct(p)));
         const fresh = await atFetchProducts();
         setProducts(fresh);
@@ -57,29 +59,27 @@ export function StoreProvider({ children }) {
       }
     } catch (e) {
       setProductsError(e.message);
-      // Fall back to defaults so the shop still renders
-      setProducts(defaultProducts.map(p => ({ ...p, image: "", variantImages: {} })));
-    } finally {
-      setProductsLoading(false);
-    }
+      setProducts(defaultProducts.map(p => ({ ...p, image:"", variantImages:{} })));
+    } finally { setProductsLoading(false); }
   }, []);
 
-  // ── Load orders from Airtable on mount ──
   const loadOrders = useCallback(async () => {
-    setOrdersLoading(true);
-    setOrdersError(null);
-    try {
-      const data = await atFetchOrders();
-      setOrders(data);
-    } catch (e) {
-      setOrdersError(e.message);
-    } finally {
-      setOrdersLoading(false);
-    }
+    setOrdersLoading(true); setOrdersError(null);
+    try { const data = await atFetchOrders(); setOrders(data); }
+    catch (e) { setOrdersError(e.message); }
+    finally { setOrdersLoading(false); }
   }, []);
 
-  useEffect(() => { loadProducts(); }, [loadProducts]);
-  useEffect(() => { loadOrders();   }, [loadOrders]);
+  const loadSuggestions = useCallback(async () => {
+    setSuggestionsLoading(true);
+    try { const data = await atFetchSuggestions(); setSuggestions(data); }
+    catch (e) { console.warn("Suggestions load failed:", e.message); }
+    finally { setSuggestionsLoading(false); }
+  }, []);
+
+  useEffect(() => { loadProducts();    }, [loadProducts]);
+  useEffect(() => { loadOrders();      }, [loadOrders]);
+  useEffect(() => { loadSuggestions(); }, [loadSuggestions]);
 
   // ── Cart ──
   const addToCart = (product, variants, qty = 1) => {
@@ -109,40 +109,44 @@ export function StoreProvider({ children }) {
   // ── Coupons ──
   const applyCoupon  = (code) => {
     const coupon = coupons.find(c => c.code.toUpperCase() === code.toUpperCase() && c.active);
-    if (coupon) { setAppliedCoupon(coupon); return { success: true, coupon }; }
-    return { success: false };
+    if (coupon) { setAppliedCoupon(coupon); return { success:true, coupon }; }
+    return { success:false };
   };
   const removeCoupon = () => setAppliedCoupon(null);
-  const addCoupon    = (c)       => { const n = { ...c, id: `c${Date.now()}` }; setCoupons(p => [...p, n]); return n; };
-  const updateCoupon = (id, chg) => setCoupons(p => p.map(c => c.id === id ? { ...c, ...chg } : c));
-  const deleteCoupon = (id)      => setCoupons(p => p.filter(c => c.id !== id));
+  const addCoupon    = (c)       => { const n = {...c, id:`c${Date.now()}`}; setCoupons(p=>[...p,n]); return n; };
+  const updateCoupon = (id, chg) => setCoupons(p => p.map(c => c.id===id ? {...c,...chg} : c));
+  const deleteCoupon = (id)      => setCoupons(p => p.filter(c => c.id!==id));
 
   // ── Orders ──
   const placeOrder = async ({ name, email, department, paymentMethod, notes }) => {
+    const isPayroll = paymentMethod === "payroll";
     const order = {
       id:            `ORD-${Date.now()}`,
       date:          new Date().toISOString(),
       name, email, department, paymentMethod,
       notes:         notes || "",
       items:         cart.map(i => ({
-        productId:   i.product.id,
-        productName: i.product.name,
-        variants:    i.variants,
-        qty:         i.qty,
-        price:       i.product.price,
-        subtotal:    i.product.price * i.qty,
+        productId:   i.product.id,   productName: i.product.name,
+        variants:    i.variants,     qty:         i.qty,
+        price:       i.product.price, subtotal:   i.product.price * i.qty,
       })),
       subtotal:      cartSubtotal,
       discount,
       couponCode:    appliedCoupon?.code || null,
       total:         cartTotal,
       status:        "pending",
-      paid:          false,
+      paid:          isPayroll, // payroll deduction = auto-paid
     };
-    // Save to Airtable
-    const created = await atCreateOrder(order);
-    const withRecord = { ...order, _recordId: created.id };
+    const created     = await atCreateOrder(order);
+    const withRecord  = { ...order, _recordId: created.id };
     setOrders(prev => [withRecord, ...prev]);
+    // Send email notification for payroll deduction
+    if (isPayroll) {
+      sendPayrollEmail({
+        name, storeNumber: department, email,
+        total: cartTotal, orderId: order.id,
+      });
+    }
     clearCart();
     return withRecord;
   };
@@ -151,37 +155,39 @@ export function StoreProvider({ children }) {
     const order = orders.find(o => o.id === id);
     if (!order?._recordId) return;
     await atUpdateOrder(order._recordId, changes);
-    setOrders(p => p.map(o => o.id === id ? { ...o, ...changes } : o));
+    setOrders(p => p.map(o => o.id===id ? {...o,...changes} : o));
   };
-
   const deleteOrder = async (id) => {
     const order = orders.find(o => o.id === id);
     if (!order?._recordId) return;
     await atDeleteOrder(order._recordId);
-    setOrders(p => p.filter(o => o.id !== id));
+    setOrders(p => p.filter(o => o.id!==id));
   };
 
   // ── Products ──
-  const addProduct = async (product) => {
-    const newProduct = { ...product, id: Date.now() };
-    const created    = await atCreateProduct(newProduct);
-    const withRecord = { ...newProduct, _recordId: created.id };
-    setProducts(p => [...p, withRecord]);
+  const addProduct    = async (p)       => { const n = {...p, id:Date.now()}; const c = await atCreateProduct(n); const w = {...n, _recordId:c.id}; setProducts(prev=>[...prev,w]); return w; };
+  const updateProduct = async (id, chg) => { const p = products.find(x=>x.id===id); if (!p?._recordId) return; await atUpdateProduct(p._recordId, chg); setProducts(prev=>prev.map(x=>x.id===id?{...x,...chg}:x)); };
+  const deleteProduct = async (id)      => { const p = products.find(x=>x.id===id); if (!p?._recordId) return; await atDeleteProduct(p._recordId); setProducts(prev=>prev.filter(x=>x.id!==id)); };
+
+  // ── Suggestions ──
+  const submitSuggestion = async ({ name, storeNumber, suggestion, question }) => {
+    const s = { id:`SUG-${Date.now()}`, date:new Date().toISOString(), name, storeNumber, suggestion, question:question||"" };
+    const created    = await atCreateSuggestion(s);
+    const withRecord = { ...s, _recordId: created.id };
+    setSuggestions(prev => [withRecord, ...prev]);
     return withRecord;
   };
-
-  const updateProduct = async (id, changes) => {
-    const product = products.find(p => p.id === id);
-    if (!product?._recordId) return;
-    await atUpdateProduct(product._recordId, changes);
-    setProducts(p => p.map(x => x.id === id ? { ...x, ...changes } : x));
+  const markSuggestionReviewed = async (id, reviewed) => {
+    const s = suggestions.find(x => x.id === id);
+    if (!s?._recordId) return;
+    await atUpdateSuggestion(s._recordId, { reviewed });
+    setSuggestions(prev => prev.map(x => x.id===id ? {...x, reviewed} : x));
   };
-
-  const deleteProduct = async (id) => {
-    const product = products.find(p => p.id === id);
-    if (!product?._recordId) return;
-    await atDeleteProduct(product._recordId);
-    setProducts(p => p.filter(x => x.id !== id));
+  const deleteSuggestion = async (id) => {
+    const s = suggestions.find(x => x.id === id);
+    if (!s?._recordId) return;
+    await atDeleteSuggestion(s._recordId);
+    setSuggestions(prev => prev.filter(x => x.id!==id));
   };
 
   return (
@@ -192,6 +198,7 @@ export function StoreProvider({ children }) {
       coupons, addCoupon, updateCoupon, deleteCoupon,
       orders, ordersLoading, ordersError, loadOrders, placeOrder, updateOrder, deleteOrder,
       products, productsLoading, productsError, loadProducts, addProduct, updateProduct, deleteProduct,
+      suggestions, suggestionsLoading, loadSuggestions, submitSuggestion, markSuggestionReviewed, deleteSuggestion,
     }}>
       {children}
     </StoreContext.Provider>
