@@ -1,16 +1,10 @@
-const AIRTABLE_TOKEN   = "pataeDZaj5AE4CQzG.2d7eab083442345f69d75bbdb3a35bb0c742c42a2b675bc91ee6e0e2e050b7d2";
+const AIRTABLE_TOKEN   = "YOUR_NEW_TOKEN_HERE";
 const AIRTABLE_BASE_ID = "app9AoQVdrFHNYj5p";
-
 const BASE_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
-
-const headers = {
-  "Authorization": `Bearer ${AIRTABLE_TOKEN}`,
-  "Content-Type":  "application/json",
-};
+const headers  = { "Authorization": `Bearer ${AIRTABLE_TOKEN}`, "Content-Type": "application/json" };
 
 async function fetchAll(table) {
-  let records = [];
-  let offset  = null;
+  let records = [], offset = null;
   do {
     const url  = offset ? `${BASE_URL}/${table}?offset=${offset}` : `${BASE_URL}/${table}`;
     const res  = await fetch(url, { headers });
@@ -21,34 +15,26 @@ async function fetchAll(table) {
   } while (offset);
   return records;
 }
-
 async function createRecord(table, fields) {
-  const res  = await fetch(`${BASE_URL}/${table}`, {
-    method: "POST", headers,
-    body: JSON.stringify({ fields }),
-  });
+  const res  = await fetch(`${BASE_URL}/${table}`, { method:"POST", headers, body:JSON.stringify({ fields }) });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Airtable create failed");
   return data;
 }
-
 async function updateRecord(table, recordId, fields) {
-  const res  = await fetch(`${BASE_URL}/${table}/${recordId}`, {
-    method: "PATCH", headers,
-    body: JSON.stringify({ fields }),
-  });
+  const res  = await fetch(`${BASE_URL}/${table}/${recordId}`, { method:"PATCH", headers, body:JSON.stringify({ fields }) });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Airtable update failed");
   return data;
 }
-
 async function deleteRecord(table, recordId) {
-  const res  = await fetch(`${BASE_URL}/${table}/${recordId}`, { method: "DELETE", headers });
+  const res  = await fetch(`${BASE_URL}/${table}/${recordId}`, { method:"DELETE", headers });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Airtable delete failed");
   return data;
 }
 
+// ── ORDERS ──
 export async function fetchOrders() {
   const records = await fetchAll("Orders");
   return records.map(r => ({
@@ -69,26 +55,16 @@ export async function fetchOrders() {
     paid:          r.fields.Paid          || false,
   }));
 }
-
 export async function createOrder(order) {
   return createRecord("Orders", {
-    OrderId:       order.id,
-    Date:          order.date,
-    Name:          order.name,
-    Email:         order.email,
-    Department:    order.department,
-    PaymentMethod: order.paymentMethod,
-    Notes:         order.notes || "",
-    Items:         JSON.stringify(order.items),
-    Subtotal:      order.subtotal,
-    Discount:      order.discount || 0,
-    CouponCode:    order.couponCode || "",
-    Total:         order.total,
-    Status:        order.status,
-    Paid:          order.paid,
+    OrderId: order.id, Date: order.date, Name: order.name, Email: order.email,
+    Department: order.department, PaymentMethod: order.paymentMethod,
+    Notes: order.notes || "", Items: JSON.stringify(order.items),
+    Subtotal: order.subtotal, Discount: order.discount || 0,
+    CouponCode: order.couponCode || "", Total: order.total,
+    Status: order.status, Paid: order.paid,
   });
 }
-
 export async function updateOrder(recordId, changes) {
   const fields = {};
   if (changes.status !== undefined) fields.Status = changes.status;
@@ -96,11 +72,9 @@ export async function updateOrder(recordId, changes) {
   if (changes.notes  !== undefined) fields.Notes  = changes.notes;
   return updateRecord("Orders", recordId, fields);
 }
+export async function deleteOrder(recordId) { return deleteRecord("Orders", recordId); }
 
-export async function deleteOrder(recordId) {
-  return deleteRecord("Orders", recordId);
-}
-
+// ── PRODUCTS ──
 export async function fetchProducts() {
   const records = await fetchAll("Products");
   return records.map(r => ({
@@ -116,21 +90,14 @@ export async function fetchProducts() {
     variantImages: JSON.parse(r.fields.VariantImages || "{}"),
   }));
 }
-
 export async function createProduct(product) {
   return createRecord("Products", {
-    ProductId:     String(product.id),
-    Name:          product.name,
-    Description:   product.description   || "",
-    Price:         product.price,
-    Cost:          product.cost          || 0,
-    Category:      product.category      || "Other",
-    Variants:      JSON.stringify(product.variants      || {}),
-    Image:         product.image         || "",
-    VariantImages: JSON.stringify(product.variantImages || {}),
+    ProductId: String(product.id), Name: product.name,
+    Description: product.description || "", Price: product.price, Cost: product.cost || 0,
+    Category: product.category || "Other", Variants: JSON.stringify(product.variants || {}),
+    Image: product.image || "", VariantImages: JSON.stringify(product.variantImages || {}),
   });
 }
-
 export async function updateProduct(recordId, changes) {
   const fields = {};
   if (changes.name          !== undefined) fields.Name          = changes.name;
@@ -143,7 +110,73 @@ export async function updateProduct(recordId, changes) {
   if (changes.variantImages !== undefined) fields.VariantImages = JSON.stringify(changes.variantImages);
   return updateRecord("Products", recordId, fields);
 }
+export async function deleteProduct(recordId) { return deleteRecord("Products", recordId); }
 
-export async function deleteProduct(recordId) {
-  return deleteRecord("Products", recordId);
+// ── SUGGESTIONS ──
+export async function fetchSuggestions() {
+  const records = await fetchAll("Suggestions");
+  return records.map(r => ({
+    _recordId:   r.id,
+    id:          r.fields.SuggestionId || r.id,
+    date:        r.fields.Date         || new Date().toISOString(),
+    name:        r.fields.Name         || "",
+    storeNumber: r.fields.StoreNumber  || "",
+    suggestion:  r.fields.Suggestion   || "",
+    question:    r.fields.Question     || "",
+    reviewed:    r.fields.Reviewed     || false,
+  }));
+}
+export async function createSuggestion(s) {
+  return createRecord("Suggestions", {
+    SuggestionId: s.id, Date: s.date, Name: s.name,
+    StoreNumber: s.storeNumber, Suggestion: s.suggestion,
+    Question: s.question || "", Reviewed: false,
+  });
+}
+export async function updateSuggestion(recordId, changes) {
+  const fields = {};
+  if (changes.reviewed !== undefined) fields.Reviewed = changes.reviewed;
+  return updateRecord("Suggestions", recordId, fields);
+}
+export async function deleteSuggestion(recordId) { return deleteRecord("Suggestions", recordId); }
+
+// ── EMAIL via EmailJS ──
+// 1. Sign up free at emailjs.com
+// 2. Create a Service (connect your Gmail or Outlook)
+// 3. Create an Email Template — use these variables in the template body:
+//    {{employee_name}}, {{store_number}}, {{employee_email}}, {{total_amount}}, {{order_id}}
+// 4. Paste your Service ID, Template ID, and Public Key below
+const EMAILJS_SERVICE_ID  = "YOUR_EMAILJS_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "YOUR_EMAILJS_TEMPLATE_ID";
+const EMAILJS_PUBLIC_KEY  = "YOUR_EMAILJS_PUBLIC_KEY";
+
+export async function sendPayrollEmail({ name, storeNumber, email, total, orderId }) {
+  if (EMAILJS_SERVICE_ID === "YOUR_EMAILJS_SERVICE_ID") {
+    console.warn("EmailJS not configured — skipping email send.");
+    return false;
+  }
+  try {
+    const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        service_id:  EMAILJS_SERVICE_ID,
+        template_id: EMAILJS_TEMPLATE_ID,
+        user_id:     EMAILJS_PUBLIC_KEY,
+        template_params: {
+          to_email:       "CWindham@Rogent.Com",
+          to_name:        "Cynthia",
+          employee_name:  name,
+          store_number:   storeNumber,
+          employee_email: email,
+          total_amount:   `$${total.toFixed(2)}`,
+          order_id:       orderId,
+        },
+      }),
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("Email send failed:", e);
+    return false;
+  }
 }
