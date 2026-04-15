@@ -146,9 +146,9 @@ export async function deleteSuggestion(recordId) { return deleteRecord("Suggesti
 // 3. Create an Email Template — use these variables in the template body:
 //    {{employee_name}}, {{store_number}}, {{employee_email}}, {{total_amount}}, {{order_id}}
 // 4. Paste your Service ID, Template ID, and Public Key below
-const EMAILJS_SERVICE_ID  = "YOUR_EMAILJS_SERVICE_ID";
-const EMAILJS_TEMPLATE_ID = "YOUR_EMAILJS_TEMPLATE_ID";
-const EMAILJS_PUBLIC_KEY  = "YOUR_EMAILJS_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID  = "service_0z1k327";
+const EMAILJS_TEMPLATE_ID = "template_3qo7qsh";
+const EMAILJS_PUBLIC_KEY  = "zR6vmfen37yC_H899";
 
 export async function sendPayrollEmail({ name, storeNumber, email, total, orderId }) {
   if (EMAILJS_SERVICE_ID === "YOUR_EMAILJS_SERVICE_ID") {
@@ -164,7 +164,7 @@ export async function sendPayrollEmail({ name, storeNumber, email, total, orderI
         template_id: EMAILJS_TEMPLATE_ID,
         user_id:     EMAILJS_PUBLIC_KEY,
         template_params: {
-          to_email:       "CWindham@Rogent.Com",
+          to_email:       "mwarren@Rogent.Com",
           to_name:        "Cynthia",
           employee_name:  name,
           store_number:   storeNumber,
