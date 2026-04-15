@@ -1,4 +1,4 @@
-const AIRTABLE_TOKEN   = "YOUR_NEW_TOKEN_HERE";
+const AIRTABLE_TOKEN   = "pataeDZaj5AE4CQzG.d537c58eab194ed0d04cc80b6328a53ac3bb041bcc81b3e372200c31327570c3";
 const AIRTABLE_BASE_ID = "app9AoQVdrFHNYj5p";
 const BASE_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
 const headers  = { "Authorization": `Bearer ${AIRTABLE_TOKEN}`, "Content-Type": "application/json" };
