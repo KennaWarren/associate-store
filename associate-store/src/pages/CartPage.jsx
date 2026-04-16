@@ -394,7 +394,7 @@ export default function CartPage({ setPage }) {
               )}
               <div style={{ display:"flex", justifyContent:"space-between", fontWeight:800, fontSize:19, color:"#1a1a1a", marginTop:14, paddingTop:14, borderTop:"1px solid #EAEAEA" }}>
                 <span>Total</span>
-                <span style={{ color:"#A22325" }}>{formatCurrency(cartTotal)}</span>
+                <span style={{ color:"#A22325" }}>{formatCurrency(lastOrder.total)}</span>
               </div>
             </div>
             <div style={{ marginTop:22, display:"flex", flexDirection:"column", gap:10 }}>
