@@ -120,31 +120,39 @@ export function StoreProvider({ children }) {
   // ── Orders ──
   const placeOrder = async ({ name, email, department, paymentMethod, notes }) => {
     const isPayroll = paymentMethod === "payroll";
+    // Capture totals NOW before anything clears the cart
+    const snapSubtotal  = cart.reduce((s, i) => s + i.product.price * i.qty, 0);
+    const snapDiscount  = appliedCoupon
+      ? appliedCoupon.type === "percent"
+        ? snapSubtotal * (appliedCoupon.value / 100)
+        : Math.min(appliedCoupon.value, snapSubtotal)
+      : 0;
+    const snapTotal     = Math.max(0, snapSubtotal - snapDiscount);
+    const snapItems     = cart.map(i => ({
+      productId:   i.product.id,   productName: i.product.name,
+      variants:    i.variants,     qty:         i.qty,
+      price:       i.product.price, subtotal:   i.product.price * i.qty,
+    }));
     const order = {
       id:            `ORD-${Date.now()}`,
       date:          new Date().toISOString(),
       name, email, department, paymentMethod,
       notes:         notes || "",
-      items:         cart.map(i => ({
-        productId:   i.product.id,   productName: i.product.name,
-        variants:    i.variants,     qty:         i.qty,
-        price:       i.product.price, subtotal:   i.product.price * i.qty,
-      })),
-      subtotal:      cartSubtotal,
-      discount,
+      items:         snapItems,
+      subtotal:      snapSubtotal,
+      discount:      snapDiscount,
       couponCode:    appliedCoupon?.code || null,
-      total:         cartTotal,
+      total:         snapTotal,
       status:        "pending",
-      paid:          true, // payroll deduction = auto-paid
+      paid:          true,
     };
     const created     = await atCreateOrder(order);
     const withRecord  = { ...order, _recordId: created.id };
     setOrders(prev => [withRecord, ...prev]);
-    // Send email notification for payroll deduction
     if (isPayroll) {
       sendPayrollEmail({
         name, storeNumber: department, email,
-        total: cartTotal, orderId: order.id,
+        total: snapTotal, orderId: order.id,
       });
     }
     clearCart();
