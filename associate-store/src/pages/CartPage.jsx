@@ -162,7 +162,7 @@ export default function CartPage({ setPage }) {
 
           <h2 style={{ fontFamily:"'Georgia', serif", fontSize:24, color:"#1a1a1a", marginBottom:8 }}>Complete Your Payment</h2>
           <p style={{ fontSize:15, color:"#555", marginBottom:6 }}>Order <span style={{ fontFamily:"monospace", color:"#A22325", fontWeight:700 }}>{lastOrder.id}</span></p>
-          <p style={{ fontSize:28, fontWeight:800, color:"#A22325", marginBottom:28 }}>{formatCurrency(lastOrder.total)}</p>
+          <p style={{ fontSize:28, fontWeight:800, color:"#A22325", marginBottom:28 }}>{formatCurrency(cartTotal)}</p>
 
           <div style={{ background:"#F7F7F7", borderRadius:14, padding:"20px 24px", marginBottom:24, textAlign:"left" }}>
             <p style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#bbb", marginBottom:12 }}>Send payment to</p>
@@ -190,7 +190,7 @@ export default function CartPage({ setPage }) {
             <input type="checkbox" checked={paymentConfirmed} onChange={e => setPaymentConfirmed(e.target.checked)}
               style={{ accentColor:"#166534", width:18, height:18, flexShrink:0 }} />
             <span style={{ fontSize:14, color:"#166534", fontWeight:600, lineHeight:1.5 }}>
-              I have sent {formatCurrency(lastOrder.total)} via {pm?.label} with reference {lastOrder.id}
+              I have sent {formatCurrency(cartTotal)} via {pm?.label} with reference {lastOrder.id}
             </span>
           </label>
 
@@ -394,7 +394,7 @@ export default function CartPage({ setPage }) {
               )}
               <div style={{ display:"flex", justifyContent:"space-between", fontWeight:800, fontSize:19, color:"#1a1a1a", marginTop:14, paddingTop:14, borderTop:"1px solid #EAEAEA" }}>
                 <span>Total</span>
-                <span style={{ color:"#A22325" }}>{formatCurrency(lastOrder.total)}</span>
+                <span style={{ color:"#A22325" }}>{formatCurrency(cartTotal)}</span>
               </div>
             </div>
             <div style={{ marginTop:22, display:"flex", flexDirection:"column", gap:10 }}>
