@@ -210,24 +210,6 @@ export default function ProductDetailPage({ product, onBack, setPage }) {
                         );
                       }
 
-                      // ── Variant image swatch ──
-                      if (hasImg) {
-                        const imgSrc = variantImages[`${key}:${opt}`];
-                        return (
-                          <button key={opt} onClick={() => handleSelect(key, opt)} title={opt}
-                            style={{
-                              width:48, height:48, padding:0,
-                              borderRadius:10, overflow:"hidden",
-                              border: isSelected ? "2.5px solid #A22325" : "2px solid #EAEAEA",
-                              cursor:"pointer",
-                              boxShadow: isSelected ? "0 2px 8px rgba(162,35,37,0.25)" : "none",
-                              transition:"all 0.15s",
-                              flexShrink:0,
-                            }}>
-                            <img src={imgSrc} alt={opt} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                          </button>
-                        );
-                      }
 
                       // ── Standard pill button ──
                       return (
