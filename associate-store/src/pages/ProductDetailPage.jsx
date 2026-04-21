@@ -176,7 +176,7 @@ export default function ProductDetailPage({ product, onBack, setPage }) {
                       const hasImg    = !!variantImages[`${key}:${opt}`];
 
                       // ── Color swatch button ──
-                      if (cssColor && !hasImg) {
+                      if (cssColor) {
                         const textClr   = getTextColor(cssColor);
                         const isWhitish = cssColor === "#FFFFFF" || cssColor === "#FFFDD0" || cssColor === "#FFFFF0" || cssColor === "#FFFAFA" || cssColor === "#F5F0E8" || cssColor === "#E8F4F8";
                         return (
