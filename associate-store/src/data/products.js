@@ -165,7 +165,7 @@ export const products = [
 export const categories = ["All", ...new Set(products.map(p => p.category))];
 
 export const paymentMethods = [
-  { id: "venmo",   label: "Venmo",                    handle: "@RogersEnterprisesInc", link: "https://venmo.com/YourCompany-Store" },
+  { id: "venmo",   label: "Venmo",                    handle: "@fornowandforever", link: "https://venmo.com/fornowandforever" },
   { id: "paypal",  label: "PayPal",                   handle: "paypal.me/RogersEnterprisesInc", link: "https://paypal.me/RogersEnterprisesInc" },
   { id: "payroll", label: "Payroll Deduction",        handle: "Deduction will be applied to your next paycheck", link: null },
 ];
