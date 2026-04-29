@@ -14,7 +14,9 @@ import {
   updateSuggestion as atUpdateSuggestion,
   deleteSuggestion as atDeleteSuggestion,
   sendPayrollEmail,
+  sendConfirmationEmail,
 } from "../data/airtable";
+import { paymentMethods } from "../data/products";
 
 const StoreContext = createContext(null);
 const COUPONS_KEY  = "associate_store_coupons";
@@ -35,11 +37,11 @@ export function StoreProvider({ children }) {
   ]));
   const [appliedCoupon, setAppliedCoupon] = useState(null);
 
-  const [ordersLoading,      setOrdersLoading]      = useState(true);
-  const [productsLoading,    setProductsLoading]     = useState(true);
-  const [suggestionsLoading, setSuggestionsLoading]  = useState(true);
-  const [ordersError,        setOrdersError]         = useState(null);
-  const [productsError,      setProductsError]       = useState(null);
+  const [ordersLoading,      setOrdersLoading]     = useState(true);
+  const [productsLoading,    setProductsLoading]   = useState(true);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const [ordersError,        setOrdersError]       = useState(null);
+  const [productsError,      setProductsError]     = useState(null);
 
   useEffect(() => {
     try { localStorage.setItem(COUPONS_KEY, JSON.stringify(coupons)); } catch {}
@@ -120,41 +122,68 @@ export function StoreProvider({ children }) {
   // ── Orders ──
   const placeOrder = async ({ name, email, department, paymentMethod, notes }) => {
     const isPayroll = paymentMethod === "payroll";
-    // Capture totals NOW before anything clears the cart
-    const snapSubtotal  = cart.reduce((s, i) => s + i.product.price * i.qty, 0);
-    const snapDiscount  = appliedCoupon
+
+    // Capture all values NOW before cart clears
+    const snapSubtotal = cart.reduce((s, i) => s + i.product.price * i.qty, 0);
+    const snapDiscount = appliedCoupon
       ? appliedCoupon.type === "percent"
         ? snapSubtotal * (appliedCoupon.value / 100)
         : Math.min(appliedCoupon.value, snapSubtotal)
       : 0;
-    const snapTotal     = Math.max(0, snapSubtotal - snapDiscount);
-    const snapItems     = cart.map(i => ({
-      productId:   i.product.id,   productName: i.product.name,
-      variants:    i.variants,     qty:         i.qty,
-      price:       i.product.price, subtotal:   i.product.price * i.qty,
+    const snapTotal = Math.max(0, snapSubtotal - snapDiscount);
+    const snapItems = cart.map(i => ({
+      productId:   i.product.id,
+      productName: i.product.name,
+      variants:    i.variants,
+      qty:         i.qty,
+      price:       i.product.price,
+      subtotal:    i.product.price * i.qty,
     }));
+
     const order = {
-      id:            `ORD-${Date.now()}`,
-      date:          new Date().toISOString(),
+      id:         `ORD-${Date.now()}`,
+      date:       new Date().toISOString(),
       name, email, department, paymentMethod,
-      notes:         notes || "",
-      items:         snapItems,
-      subtotal:      snapSubtotal,
-      discount:      snapDiscount,
-      couponCode:    appliedCoupon?.code || null,
-      total:         snapTotal,
-      status:        "pending",
-      paid:          true,
+      notes:      notes || "",
+      items:      snapItems,
+      subtotal:   snapSubtotal,
+      discount:   snapDiscount,
+      couponCode: appliedCoupon?.code || null,
+      total:      snapTotal,
+      status:     "pending",
+      paid:       true,
     };
-    const created     = await atCreateOrder(order);
-    const withRecord  = { ...order, _recordId: created.id };
+
+    const created    = await atCreateOrder(order);
+    const withRecord = { ...order, _recordId: created.id };
     setOrders(prev => [withRecord, ...prev]);
+
+    // Get readable payment method label for emails
+    const pmLabel = paymentMethods.find(p => p.id === paymentMethod)?.label || paymentMethod;
+
+    // Send payroll notification email to Cynthia
     if (isPayroll) {
       sendPayrollEmail({
-        name, storeNumber: department, email,
-        total: snapTotal, orderId: order.id,
+        name,
+        storeNumber: department,
+        email,
+        total:   snapTotal,
+        orderId: order.id,
       });
     }
+
+    // Send order confirmation email to the customer
+    sendConfirmationEmail({
+      name,
+      email,
+      storeNumber:   department,
+      orderId:       order.id,
+      date:          order.date,
+      items:         snapItems,
+      total:         snapTotal,
+      paymentMethod: pmLabel,
+    });
+
     clearCart();
     return withRecord;
   };
@@ -173,9 +202,9 @@ export function StoreProvider({ children }) {
   };
 
   // ── Products ──
-  const addProduct    = async (p)       => { const n = {...p, id:Date.now()}; const c = await atCreateProduct(n); const w = {...n, _recordId:c.id}; setProducts(prev=>[...prev,w]); return w; };
-  const updateProduct = async (id, chg) => { const p = products.find(x=>x.id===id); if (!p?._recordId) return; await atUpdateProduct(p._recordId, chg); setProducts(prev=>prev.map(x=>x.id===id?{...x,...chg}:x)); };
-  const deleteProduct = async (id)      => { const p = products.find(x=>x.id===id); if (!p?._recordId) return; await atDeleteProduct(p._recordId); setProducts(prev=>prev.filter(x=>x.id!==id)); };
+  const addProduct    = async (p)       => { const n={...p,id:Date.now()}; const c=await atCreateProduct(n); const w={...n,_recordId:c.id}; setProducts(prev=>[...prev,w]); return w; };
+  const updateProduct = async (id, chg) => { const p=products.find(x=>x.id===id); if(!p?._recordId)return; await atUpdateProduct(p._recordId,chg); setProducts(prev=>prev.map(x=>x.id===id?{...x,...chg}:x)); };
+  const deleteProduct = async (id)      => { const p=products.find(x=>x.id===id); if(!p?._recordId)return; await atDeleteProduct(p._recordId); setProducts(prev=>prev.filter(x=>x.id!==id)); };
 
   // ── Suggestions ──
   const submitSuggestion = async ({ name, storeNumber, suggestion, question }) => {
