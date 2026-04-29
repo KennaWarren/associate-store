@@ -23,7 +23,8 @@ export default function CartPage({ setPage }) {
   const validate = () => {
     const e = {};
     if (!form.name.trim())        e.name       = "Required";
-    if (!form.email.trim())       e.email      = "Required";
+    if (!form.email.trim())       e.email = "Required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Please enter a valid email address";
     if (!form.department.trim())  e.department = "Required";
     setErrors(e);
     return Object.keys(e).length === 0;
