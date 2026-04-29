@@ -147,10 +147,10 @@ export async function deleteSuggestion(recordId) { return deleteRecord("Suggesti
 //    - Payroll template (sends to Cynthia): use {{employee_name}}, {{store_number}}, {{employee_email}}, {{total_amount}}, {{order_id}}
 //    - Confirmation template (sends to customer): use {{customer_name}}, {{customer_email}}, {{order_id}}, {{order_date}}, {{store_number}}, {{payment_method}}, {{order_items}}, {{total_amount}}, {{payment_instructions}}
 // 4. Paste your IDs below
-const EMAILJS_SERVICE_ID            = "YOUR_EMAILJS_SERVICE_ID";
-const EMAILJS_TEMPLATE_ID           = "YOUR_EMAILJS_PAYROLL_TEMPLATE_ID";
-const EMAILJS_CONFIRMATION_TEMPLATE = "YOUR_EMAILJS_CONFIRMATION_TEMPLATE_ID";
-const EMAILJS_PUBLIC_KEY            = "YOUR_EMAILJS_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID            = "service_0z1k327";
+const EMAILJS_TEMPLATE_ID           = "template_3qo7qsh";
+const EMAILJS_CONFIRMATION_TEMPLATE = "template_ie9cie8";
+const EMAILJS_PUBLIC_KEY            = "zR6vmfen37yC_H899";
 
 async function sendEmail(templateId, templateParams) {
   if (EMAILJS_SERVICE_ID === "YOUR_EMAILJS_SERVICE_ID") {
