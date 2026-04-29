@@ -4,6 +4,7 @@ import { paymentMethods } from "../data/products";
 import { formatCurrency } from "../data/utils";
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+const STORE_REGEX = /^\d{5}$/;
 
 export default function CartPage({ setPage }) {
   const { cart, removeFromCart, updateQty, cartSubtotal, discount, cartTotal,
@@ -22,8 +23,14 @@ export default function CartPage({ setPage }) {
   const [errors, setErrors] = useState({});
 
   const validateEmail = (email) => {
-    if (!email.trim())              return "Required";
-    if (!EMAIL_REGEX.test(email.trim())) return "Please enter a valid email address (e.g. name@company.com)";
+    if (!email.trim())                    return "Required";
+    if (!EMAIL_REGEX.test(email.trim()))  return "Please enter a valid email address (e.g. name@company.com)";
+    return null;
+  };
+
+  const validateStore = (store) => {
+    if (!store.trim())                   return "Required";
+    if (!STORE_REGEX.test(store.trim())) return "Store number must be exactly 5 digits (e.g. 10001)";
     return null;
   };
 
@@ -32,12 +39,12 @@ export default function CartPage({ setPage }) {
     if (!form.name.trim())       e.name       = "Required";
     const emailErr = validateEmail(form.email);
     if (emailErr)                 e.email      = emailErr;
-    if (!form.department.trim()) e.department = "Required";
+    const storeErr = validateStore(form.department);
+    if (storeErr)                 e.department = storeErr;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  // Validate email live as user types / on blur
   const handleEmailChange = (val) => {
     setForm(f => ({ ...f, email: val }));
     if (errors.email) {
@@ -50,6 +57,22 @@ export default function CartPage({ setPage }) {
     const err = validateEmail(form.email);
     if (err) setErrors(e => ({ ...e, email: err }));
     else     setErrors(e => { const n={...e}; delete n.email; return n; });
+  };
+
+  const handleStoreChange = (val) => {
+    // Only allow digits, max 5
+    const digits = val.replace(/\D/g, "").slice(0, 5);
+    setForm(f => ({ ...f, department: digits }));
+    if (errors.department) {
+      const err = validateStore(digits);
+      setErrors(e => ({ ...e, department: err || undefined }));
+    }
+  };
+
+  const handleStoreBlur = () => {
+    const err = validateStore(form.department);
+    if (err) setErrors(e => ({ ...e, department: err }));
+    else     setErrors(e => { const n={...e}; delete n.department; return n; });
   };
 
   const handleApplyCoupon = () => {
@@ -347,9 +370,12 @@ export default function CartPage({ setPage }) {
                   <Field label="Store Number *" error={errors.department}>
                     <input
                       value={form.department}
-                      onChange={e => setForm(f=>({...f,department:e.target.value}))}
-                      onBlur={() => { if (!form.department.trim()) setErrors(e=>({...e,department:"Required"})); else setErrors(e=>{const n={...e};delete n.department;return n;}); }}
-                      style={inp(errors.department)} placeholder="e.g. Store #42"
+                      onChange={e => handleStoreChange(e.target.value)}
+                      onBlur={handleStoreBlur}
+                      style={inp(errors.department)}
+                      placeholder="5-digit store number (e.g. 10001)"
+                      inputMode="numeric"
+                      maxLength={5}
                     />
                   </Field>
 
