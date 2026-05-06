@@ -83,16 +83,16 @@ function ImageUploader({ value, onChange, label="Upload Image", small=false }) {
 }
 
 // ── Variant Image Combo section ──────────────────────────────────────────────
-// Renders a grid of combo pickers so admin can say:
-// "Color=Red + Gender=Women's → [this image]"
 function VariantImageCombos({ variants, variantImages, onChange }) {
   const variantKeys = Object.keys(variants);
   if (variantKeys.length === 0) return null;
 
-  // Generate all existing combo keys and any new ones the admin is building
-  // We show every existing variantImage entry plus a UI to add new ones
   const [newCombo, setNewCombo] = useState({});
   const [adding, setAdding]     = useState(false);
+
+  // __default__ is a special key meaning "show this when nothing is selected yet"
+  const defaultKey    = variantImages.__default__ || null;
+  const comboEntries  = Object.entries(variantImages).filter(([k]) => k !== "__default__");
 
   const buildKey = (combo) =>
     Object.entries(combo)
@@ -112,6 +112,8 @@ function VariantImageCombos({ variants, variantImages, onChange }) {
   const handleRemoveCombo = (key) => {
     const updated = { ...variantImages };
     delete updated[key];
+    // If we removed the default, clear it
+    if (updated.__default__ === key) delete updated.__default__;
     onChange(updated);
   };
 
@@ -119,7 +121,17 @@ function VariantImageCombos({ variants, variantImages, onChange }) {
     onChange({ ...variantImages, [key]: img });
   };
 
-  // Parse a combo key back to readable label
+  const handleSetDefault = (key) => {
+    // Toggle off if already default
+    if (defaultKey === key) {
+      const updated = { ...variantImages };
+      delete updated.__default__;
+      onChange(updated);
+    } else {
+      onChange({ ...variantImages, __default__: key });
+    }
+  };
+
   const keyToLabel = (key) =>
     key.split("|").map(p => {
       const [k, v] = p.split(":");
@@ -128,7 +140,7 @@ function VariantImageCombos({ variants, variantImages, onChange }) {
 
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
         <p style={{ fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#aaa" }}>
           Variant Images
         </p>
@@ -138,23 +150,48 @@ function VariantImageCombos({ variants, variantImages, onChange }) {
       </div>
 
       <p style={{ fontSize:12, color:"#bbb", marginBottom:14, lineHeight:1.5 }}>
-        Assign an image to any combination of options (e.g. Red + Women's). The most specific match will show when a customer selects those options.
+        Assign an image to any combination of options. Click ★ next to a combo to make it the default image shown before any selection is made.
       </p>
 
       {/* Existing combos */}
-      {Object.entries(variantImages).map(([key, img]) => (
-        <div key={key} style={{ background:"#F7F7F7", border:"1px solid #EAEAEA", borderRadius:12, padding:"14px 16px", marginBottom:10 }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-            <span style={{ fontSize:13, fontWeight:600, color:"#333" }}>{keyToLabel(key)}</span>
-            <button onClick={() => handleRemoveCombo(key)} style={{ background:"none", border:"none", color:"#A22325", cursor:"pointer", fontSize:13, fontWeight:600 }}>Remove</button>
+      {comboEntries.map(([key, img]) => {
+        const isDefault = defaultKey === key;
+        return (
+          <div key={key} style={{
+            background: isDefault ? "#FFFBEB" : "#F7F7F7",
+            border: `1.5px solid ${isDefault ? "#FDE68A" : "#EAEAEA"}`,
+            borderRadius:12, padding:"14px 16px", marginBottom:10,
+          }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                {/* Default star button */}
+                <button
+                  onClick={() => handleSetDefault(key)}
+                  title={isDefault ? "Remove as default" : "Set as default image"}
+                  style={{
+                    background:"none", border:"none", cursor:"pointer",
+                    fontSize:18, lineHeight:1, padding:0,
+                    color: isDefault ? "#F59E0B" : "#ddd",
+                    transition:"color 0.15s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = isDefault ? "#D97706" : "#F59E0B"}
+                  onMouseLeave={e => e.currentTarget.style.color = isDefault ? "#F59E0B" : "#ddd"}
+                >★</button>
+                <span style={{ fontSize:13, fontWeight:600, color:"#333" }}>
+                  {keyToLabel(key)}
+                  {isDefault && <span style={{ fontSize:11, color:"#D97706", fontWeight:700, marginLeft:8, background:"#FEF3C7", padding:"2px 8px", borderRadius:10 }}>Default</span>}
+                </span>
+              </div>
+              <button onClick={() => handleRemoveCombo(key)} style={{ background:"none", border:"none", color:"#A22325", cursor:"pointer", fontSize:13, fontWeight:600 }}>Remove</button>
+            </div>
+            <ImageUploader
+              value={img}
+              onChange={(newImg) => handleImageChange(key, newImg)}
+              label="Upload image for this combo"
+            />
           </div>
-          <ImageUploader
-            value={img}
-            onChange={(newImg) => handleImageChange(key, newImg)}
-            label="Upload image for this combo"
-          />
-        </div>
-      ))}
+        );
+      })}
 
       {/* Add new combo UI */}
       {adding && (
@@ -518,9 +555,6 @@ function ProductsTab() {
                 <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={pInp}>
                   {CATEGORIES.map(c=><option key={c}>{c}</option>)}
                 </select>
-              </PField>
-              <PField label="Main Product Image">
-                <ImageUploader value={form.image} onChange={img=>setForm(f=>({...f,image:img}))} label="Upload Main Image" />
               </PField>
 
               {/* Variants */}
