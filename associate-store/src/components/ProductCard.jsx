@@ -13,6 +13,13 @@ export default function ProductCard({ product, onClick }) {
   const accentBg    = categoryAccents[product.category] || "#F7F7F7";
   const hasVariants = Object.keys(product.variants || {}).length > 0;
 
+  // Resolve display image: use __default__ variant image if set, else product.image
+  const variantImages = product.variantImages || {};
+  const defaultImgKey = variantImages.__default__;
+  const displayImage  = defaultImgKey
+    ? variantImages[defaultImgKey] || product.image || ""
+    : product.image || "";
+
   return (
     <article
       onClick={onClick}
@@ -38,18 +45,18 @@ export default function ProductCard({ product, onClick }) {
     >
       {/* Image area — no category badge shown */}
       <div style={{
-        background: product.image ? "#F7F7F7" : accentBg,
+        background: displayImage ? "#F7F7F7" : accentBg,
         height: 200,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
         overflow: "hidden",
-        padding: product.image ? "8px" : 0,
+        padding: displayImage ? "8px" : 0,
       }}>
-        {product.image ? (
+        {displayImage ? (
           <img
-            src={product.image}
+            src={displayImage}
             alt={product.name}
             style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain", display:"block" }}
           />
