@@ -194,7 +194,9 @@ export default function ProductDetailPage({ product, onBack, setPage }) {
                     <img src={defaultImg} alt="Default" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                   </button>
                 )}
-                {allVariantImgs.map(([key, img]) => {
+                {allVariantImgs
+                  .filter(([key]) => key !== variantImages.__default__)
+                  .map(([key, img]) => {
                   // Build a readable label from the key
                   const label = key.split("|").map(p => p.split(":")[1]).join(" / ");
                   return (
