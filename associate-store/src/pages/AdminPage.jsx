@@ -18,7 +18,7 @@ const STATUS_COLORS  = {
 const CATEGORIES = ["Apparel","Accessories","Drinkware","Bags","Office","Other"];
 const TABS = ["orders","products","coupons","suggestions"];
 
-function compressImage(file, maxDim=600, quality=0.65) {
+function compressImage(file, maxDim=400, quality=0.55) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;
