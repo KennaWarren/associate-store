@@ -42,36 +42,57 @@ function buildComboKey(variantEntries) {
     .join("|");
 }
 
-// Find the best matching variant image for the current selection
-// Priority: most specific match (most matching keys) wins
+// Find the best matching variant image for the current selection.
+// Strategy:
+// 1. Exact full match (all combo keys match selected) — highest priority
+// 2. Partial match (some combo keys match, none conflict) — pick highest score
+// 3. Any image that contains at least one matching key — last resort
+// This means selecting "Male" alone will show the best male image even if
+// no single-key Male entry exists, e.g. it'll pick Color:Black|Gender:Male
 function findBestVariantImage(selected, variantImages) {
   if (!variantImages || Object.keys(variantImages).length === 0) return null;
-  const selectedEntries = Object.entries(selected);
+  const selectedEntries = Object.entries(selected).filter(([,v]) => v);
   if (selectedEntries.length === 0) return null;
 
-  let bestImg   = null;
-  let bestScore = 0;
+  // Skip the __default__ meta key
+  const entries = Object.entries(variantImages).filter(([k, img]) => k !== "__default__" && img);
+  if (entries.length === 0) return null;
 
-  for (const [key, img] of Object.entries(variantImages)) {
-    if (!img) continue;
-    // Key format: "VarA:ValA|VarB:ValB" (multi) or "VarA:ValA" (single)
+  let bestImg    = null;
+  let bestScore  = -1;
+
+  for (const [key, img] of entries) {
     const parts = key.split("|").map(p => p.trim());
-    let score = 0;
-    let allMatch = true;
+    let matches  = 0;
+    let conflicts = 0;
+
     for (const part of parts) {
       const [k, v] = part.split(":").map(s => s.trim());
       if (selected[k] === v) {
-        score++;
-      } else {
-        allMatch = false;
-        break;
+        matches++;
+      } else if (selected[k] !== undefined && selected[k] !== v) {
+        // This key is selected but to a different value — hard conflict
+        conflicts++;
       }
+      // If selected[k] is undefined the user hasn't chosen this axis yet — not a conflict
     }
-    if (allMatch && score > bestScore) {
+
+    if (conflicts > 0) continue; // skip anything that contradicts current selection
+
+    // Score = matches - small penalty for unresolved axes
+    // This ensures a full match (2/2) beats a partial match (1/2)
+    const unresolvedParts = parts.filter(p => {
+      const [k] = p.split(":");
+      return selected[k] === undefined;
+    }).length;
+    const score = matches * 10 - unresolvedParts;
+
+    if (matches > 0 && score > bestScore) {
       bestScore = score;
       bestImg   = img;
     }
   }
+
   return bestImg;
 }
 
