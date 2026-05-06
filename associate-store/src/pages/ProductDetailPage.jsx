@@ -89,11 +89,21 @@ export default function ProductDetailPage({ product, onBack, setPage }) {
   const accentBg      = categoryAccents[product.category] || "#F7F7F7";
   const variantImages = product.variantImages || {};
 
+  // Resolve the default image: prefer __default__ key, fall back to product.image
+  const defaultImg = variantImages.__default__
+    ? variantImages[variantImages.__default__] || product.image || ""
+    : product.image || "";
+
   // Update main image whenever selection changes
   useEffect(() => {
     const best = findBestVariantImage(selected, variantImages);
-    setActiveImage(best || product.image || "");
+    setActiveImage(best || defaultImg);
   }, [selected, product.image, variantImages]);
+
+  // Initialise active image to default
+  useEffect(() => {
+    setActiveImage(defaultImg);
+  }, [product.id]);
 
   const handleSelect = (key, opt) => setSelected(s => ({ ...s, [key]: opt }));
 
@@ -105,8 +115,8 @@ export default function ProductDetailPage({ product, onBack, setPage }) {
     if (andGo) setPage("cart");
   };
 
-  // Collect all variant images for the thumbnail strip
-  const allVariantImgs = Object.entries(variantImages).filter(([, v]) => v);
+  // Collect all variant images for the thumbnail strip — exclude __default__ meta key
+  const allVariantImgs = Object.entries(variantImages).filter(([k, v]) => k !== "__default__" && v);
 
   return (
     <div style={{ background:"#F7F7F7", minHeight:"100vh" }}>
@@ -153,14 +163,14 @@ export default function ProductDetailPage({ product, onBack, setPage }) {
             {/* Thumbnail strip */}
             {allVariantImgs.length > 0 && (
               <div style={{ display:"flex", gap:10, marginTop:14, flexWrap:"wrap" }}>
-                {product.image && (
-                  <button onClick={() => setActiveImage(product.image)} title="Main image" style={{
+                {defaultImg && (
+                  <button onClick={() => setActiveImage(defaultImg)} title="Default image" style={{
                     width:64, height:64, borderRadius:10, overflow:"hidden",
-                    border: activeImage===product.image ? "2.5px solid #A22325" : "2px solid #EAEAEA",
+                    border: activeImage===defaultImg ? "2.5px solid #A22325" : "2px solid #EAEAEA",
                     cursor:"pointer", padding:0, background:"#F7F7F7",
-                    boxShadow: activeImage===product.image ? "0 2px 8px rgba(162,35,37,0.2)" : "none",
+                    boxShadow: activeImage===defaultImg ? "0 2px 8px rgba(162,35,37,0.2)" : "none",
                   }}>
-                    <img src={product.image} alt="Main" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                    <img src={defaultImg} alt="Default" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                   </button>
                 )}
                 {allVariantImgs.map(([key, img]) => {
