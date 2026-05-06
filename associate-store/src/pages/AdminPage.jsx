@@ -1,3 +1,8 @@
+// ─── VARIANT IMAGE COMBO BUILDER ───────────────────────────────────────────
+// This component lives inside the product editor modal.
+// It lets admins assign one image to any combination of variant options.
+// Keys are stored as "VarA:ValA|VarB:ValB" sorted alphabetically.
+
 import { useState, useRef, useCallback } from "react";
 import { useStore } from "../context/StoreContext";
 import { formatCurrency, formatDate } from "../data/utils";
@@ -13,7 +18,6 @@ const STATUS_COLORS  = {
 const CATEGORIES = ["Apparel","Accessories","Drinkware","Bags","Office","Other"];
 const TABS = ["orders","products","coupons","suggestions"];
 
-/* ─── Image compression ─── */
 function compressImage(file, maxDim=600, quality=0.65) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -25,7 +29,7 @@ function compressImage(file, maxDim=600, quality=0.65) {
         let { width, height } = img;
         if (width > maxDim || height > maxDim) {
           if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
-          else                 { width  = Math.round(width  * maxDim / height); height = maxDim; }
+          else                  { width  = Math.round(width  * maxDim / height); height = maxDim; }
         }
         const canvas = document.createElement("canvas");
         canvas.width = width; canvas.height = height;
@@ -60,7 +64,7 @@ function ImageUploader({ value, onChange, label="Upload Image", small=false }) {
       ) : value ? (
         <div style={{ position:"relative", display:"inline-block" }}>
           <div style={{ width:small?72:"100%", height:small?72:160, borderRadius:small?8:12, border:"1.5px solid #EAEAEA", background:"#F7F7F7", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
-            <img src={value} alt="preview" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain", display:"block" }} />
+            <img src={value} alt="preview" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain" }} />
           </div>
           <button onClick={() => onChange("")} style={{ position:"absolute", top:-8, right:-8, background:"#A22325", color:"#fff", border:"none", borderRadius:"50%", width:22, height:22, fontSize:13, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
           <button onClick={() => ref.current.click()} style={{ marginTop:small?4:8, display:"block", fontSize:11, color:"#A22325", fontWeight:600, background:"none", border:"none", cursor:"pointer", padding:0 }}>Change</button>
@@ -73,6 +77,121 @@ function ImageUploader({ value, onChange, label="Upload Image", small=false }) {
           {!small && <span style={{ fontSize:12, color:"#bbb", fontWeight:500 }}>{label}</span>}
           {!small && <span style={{ fontSize:11, color:"#ddd" }}>PNG, JPG — any size</span>}
         </button>
+      )}
+    </div>
+  );
+}
+
+// ── Variant Image Combo section ──────────────────────────────────────────────
+// Renders a grid of combo pickers so admin can say:
+// "Color=Red + Gender=Women's → [this image]"
+function VariantImageCombos({ variants, variantImages, onChange }) {
+  const variantKeys = Object.keys(variants);
+  if (variantKeys.length === 0) return null;
+
+  // Generate all existing combo keys and any new ones the admin is building
+  // We show every existing variantImage entry plus a UI to add new ones
+  const [newCombo, setNewCombo] = useState({});
+  const [adding, setAdding]     = useState(false);
+
+  const buildKey = (combo) =>
+    Object.entries(combo)
+      .filter(([,v]) => v)
+      .sort(([a],[b]) => a.localeCompare(b))
+      .map(([k,v]) => `${k}:${v}`)
+      .join("|");
+
+  const handleAddCombo = () => {
+    const key = buildKey(newCombo);
+    if (!key) return;
+    onChange({ ...variantImages, [key]: "" });
+    setNewCombo({});
+    setAdding(false);
+  };
+
+  const handleRemoveCombo = (key) => {
+    const updated = { ...variantImages };
+    delete updated[key];
+    onChange(updated);
+  };
+
+  const handleImageChange = (key, img) => {
+    onChange({ ...variantImages, [key]: img });
+  };
+
+  // Parse a combo key back to readable label
+  const keyToLabel = (key) =>
+    key.split("|").map(p => {
+      const [k, v] = p.split(":");
+      return `${k}: ${v}`;
+    }).join("  +  ");
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+        <p style={{ fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#aaa" }}>
+          Variant Images
+        </p>
+        <button onClick={() => setAdding(true)} style={{ fontSize:12, color:"#A22325", fontWeight:600, background:"none", border:"none", cursor:"pointer" }}>
+          + Add Image Combo
+        </button>
+      </div>
+
+      <p style={{ fontSize:12, color:"#bbb", marginBottom:14, lineHeight:1.5 }}>
+        Assign an image to any combination of options (e.g. Red + Women's). The most specific match will show when a customer selects those options.
+      </p>
+
+      {/* Existing combos */}
+      {Object.entries(variantImages).map(([key, img]) => (
+        <div key={key} style={{ background:"#F7F7F7", border:"1px solid #EAEAEA", borderRadius:12, padding:"14px 16px", marginBottom:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <span style={{ fontSize:13, fontWeight:600, color:"#333" }}>{keyToLabel(key)}</span>
+            <button onClick={() => handleRemoveCombo(key)} style={{ background:"none", border:"none", color:"#A22325", cursor:"pointer", fontSize:13, fontWeight:600 }}>Remove</button>
+          </div>
+          <ImageUploader
+            value={img}
+            onChange={(newImg) => handleImageChange(key, newImg)}
+            label="Upload image for this combo"
+          />
+        </div>
+      ))}
+
+      {/* Add new combo UI */}
+      {adding && (
+        <div style={{ background:"#FFF0F0", border:"1.5px solid rgba(162,35,37,0.2)", borderRadius:12, padding:"16px", marginBottom:10 }}>
+          <p style={{ fontSize:12, fontWeight:600, color:"#A22325", marginBottom:12 }}>Select variant options for this image:</p>
+          <div style={{ display:"grid", gap:10, marginBottom:14 }}>
+            {variantKeys.map(key => (
+              <div key={key}>
+                <label style={{ fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:"#aaa", display:"block", marginBottom:6 }}>{key}</label>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                  <button
+                    onClick={() => setNewCombo(c => { const n={...c}; delete n[key]; return n; })}
+                    style={{ padding:"5px 12px", border:"1.5px solid", borderColor:!newCombo[key]?"#A22325":"#EAEAEA", borderRadius:8, background:!newCombo[key]?"#A22325":"#fff", color:!newCombo[key]?"#fff":"#666", fontSize:12, cursor:"pointer" }}
+                  >Any</button>
+                  {(variants[key]||[]).map(opt => (
+                    <button key={opt}
+                      onClick={() => setNewCombo(c => ({...c, [key]: opt}))}
+                      style={{ padding:"5px 12px", border:"1.5px solid", borderColor:newCombo[key]===opt?"#A22325":"#EAEAEA", borderRadius:8, background:newCombo[key]===opt?"#A22325":"#fff", color:newCombo[key]===opt?"#fff":"#555", fontSize:12, cursor:"pointer" }}
+                    >{opt}</button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display:"flex", gap:10 }}>
+            <button onClick={handleAddCombo} style={{ background:"#A22325", color:"#fff", border:"none", borderRadius:8, padding:"9px 18px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              Add This Combo
+            </button>
+            <button onClick={() => { setAdding(false); setNewCombo({}); }} style={{ background:"#F7F7F7", color:"#666", border:"1px solid #EAEAEA", borderRadius:8, padding:"9px 18px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {Object.keys(variantImages).length === 0 && !adding && (
+        <p style={{ fontSize:12, color:"#ccc", fontStyle:"italic" }}>No variant images yet. Click "+ Add Image Combo" above to get started.</p>
       )}
     </div>
   );
@@ -110,12 +229,12 @@ export default function AdminPage() {
 /* ══════════ ORDERS TAB ══════════ */
 function OrdersTab() {
   const { orders, updateOrder, deleteOrder, ordersLoading, ordersError, loadOrders } = useStore();
-  const [filter, setFilter]           = useState("all");
-  const [paidFilter, setPaidFilter]   = useState("all");
+  const [filter, setFilter]             = useState("all");
+  const [paidFilter, setPaidFilter]     = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [search, setSearch]           = useState("");
-  const [expanded, setExpanded]       = useState(null);
-  const [confirmDel, setConfirmDel]   = useState(null);
+  const [search, setSearch]             = useState("");
+  const [expanded, setExpanded]         = useState(null);
+  const [confirmDel, setConfirmDel]     = useState(null);
 
   const printPackingSlip = (order, payMethod) => {
     const itemRows = order.items.map(item => {
@@ -142,7 +261,7 @@ function OrdersTab() {
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px;"><thead><tr style="background:#1a1a1a;">
       <th style="padding:10px 8px;text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#fff;">Item</th>
       <th style="padding:10px 8px;text-align:center;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#fff;">Qty</th>
-      <th style="padding:10px 8px;text-align:right;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#fff;">Unit Price</th>
+      <th style="padding:10px 8px;text-align:right;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#fff;">Unit</th>
       <th style="padding:10px 8px;text-align:right;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#fff;">Subtotal</th>
     </tr></thead><tbody>${itemRows}</tbody></table>
     <div style="display:flex;justify-content:flex-end;"><div style="width:240px;">
@@ -177,10 +296,10 @@ function OrdersTab() {
       ...orders.map(o => [
         o.id, formatDate(o.date), o.name, o.email, o.department,
         o.items.map(i=>`${i.productName}(${i.qty})`).join("; "),
-        o.subtotal?.toFixed(2)||o.total.toFixed(2), (o.discount||0).toFixed(2),
-        o.couponCode||"", o.total.toFixed(2),
+        o.subtotal?.toFixed(2)||o.total.toFixed(2),(o.discount||0).toFixed(2),
+        o.couponCode||"",o.total.toFixed(2),
         paymentMethods.find(p=>p.id===o.paymentMethod)?.label||o.paymentMethod,
-        o.paid?"Yes":"No", o.status, o.notes||"",
+        o.paid?"Yes":"No",o.status,o.notes||"",
       ])
     ];
     const csv  = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
@@ -204,98 +323,95 @@ function OrdersTab() {
 
       {ordersError && <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:10, padding:"12px 16px", marginBottom:20, fontSize:13, color:"#991B1B" }}>Could not load orders: {ordersError}</div>}
 
-      {ordersLoading ? <div style={{ textAlign:"center", padding:"60px 0" }}><p style={{ fontSize:32 }}>⏳</p><p style={{ color:"#bbb", marginTop:12 }}>Loading orders…</p></div> : (<>
-
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(190px, 1fr))", gap:16, marginBottom:28 }}>
-        <StatCard label="Total Orders"  value={orders.length} sub={`${orders.filter(o=>o.status==="pending").length} pending`} />
-        <StatCard label="Total Revenue" value={formatCurrency(totalRev)} sub="all orders" />
-        <StatCard label="Collected"     value={formatCurrency(paidRev)} sub={`${orders.filter(o=>o.paid).length} paid`} accent="#166534" />
-        <StatCard label="Outstanding"   value={formatCurrency(totalRev-paidRev)} sub={`${orders.filter(o=>!o.paid).length} unpaid`} accent="#A22325" />
-      </div>
-
-      <div style={{ background:"#fff", borderRadius:14, padding:"14px 18px", marginBottom:14, display:"flex", gap:12, flexWrap:"wrap", alignItems:"center", border:"1px solid #EAEAEA", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
-        <input type="text" placeholder="Search by name, email, order ID..." value={search} onChange={e=>setSearch(e.target.value)}
-          style={{ flex:1, minWidth:180, padding:"10px 14px", border:"1.5px solid #EAEAEA", borderRadius:10, fontSize:13, outline:"none", background:"#F7F7F7", color:"#1a1a1a" }} />
-        <FilterGroup label="Status:" value={filter} onChange={setFilter}
-          options={[["all","All"],["pending","Pending"],["processing","Processing"],["fulfilled","Fulfilled"],["cancelled","Cancelled"]]} />
-        <FilterGroup label="Paid:" value={paidFilter} onChange={setPaidFilter}
-          options={[["all","All"],["paid","Paid"],["unpaid","Unpaid"]]} />
-        <FilterGroup label="Payment:" value={paymentFilter} onChange={setPaymentFilter}
-          options={[["all","All"], ...paymentMethods.map(p=>[p.id, p.label])]} />
-      </div>
-
-      {filtered.length === 0 ? <EmptyState icon="📭" text="No orders match your filters." /> : (
-        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          {filtered.map(order => {
-            const isExp     = expanded===order.id;
-            const statusSty = STATUS_COLORS[order.status]||STATUS_COLORS.pending;
-            const payMethod = paymentMethods.find(p=>p.id===order.paymentMethod);
-            return (
-              <div key={order.id} style={{ background:"#fff", border:"1px solid #EAEAEA", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.04)", borderLeft:`4px solid ${order.paid?"#16a34a":"#A22325"}` }}>
-                <div onClick={() => setExpanded(isExp?null:order.id)}
-                  style={{ padding:"14px 18px", display:"grid", gridTemplateColumns:"1fr 100px 90px 130px 110px 36px", gap:12, alignItems:"center", cursor:"pointer", transition:"background 0.1s" }}
-                  onMouseEnter={e=>e.currentTarget.style.background="#FAFAFA"}
-                  onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-                  <div>
-                    <p style={{ fontWeight:600, fontSize:14, color:"#1a1a1a", marginBottom:3 }}>{order.name}</p>
-                    <p style={{ fontSize:12, color:"#bbb", fontFamily:"monospace" }}>{order.id}</p>
-                    <p style={{ fontSize:12, color:"#ccc" }}>{formatDate(order.date)} · Store {order.department}</p>
-                  </div>
-                  <span style={{ fontSize:13, color:"#888" }}>{order.items.length} item{order.items.length!==1?"s":""}</span>
-                  <span style={{ fontWeight:800, fontSize:15, color:"#1a1a1a" }}>{formatCurrency(order.total)}</span>
-                  <select value={order.status} onChange={e=>{e.stopPropagation();updateOrder(order.id,{status:e.target.value});}} onClick={e=>e.stopPropagation()}
-                    style={{ background:statusSty.bg, color:statusSty.color, border:`1px solid ${statusSty.border}`, borderRadius:8, padding:"6px 10px", fontSize:12, fontWeight:600, cursor:"pointer", outline:"none" }}>
-                    {STATUS_OPTIONS.map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
-                  </select>
-                  <label onClick={e=>e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
-                    <input type="checkbox" checked={order.paid} onChange={e=>updateOrder(order.id,{paid:e.target.checked})} style={{ accentColor:"#A22325", width:15, height:15 }} />
-                    <span style={{ fontSize:12, color:order.paid?"#166534":"#A22325", fontWeight:700 }}>{order.paid?"Paid":"Unpaid"}</span>
-                  </label>
-                  <span style={{ color:"#ccc", fontSize:14 }}>{isExp?"▲":"▼"}</span>
-                </div>
-                {isExp && (
-                  <div style={{ borderTop:"1px solid #F0F0F0", padding:"18px", background:"#FAFAFA" }}>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
-                      <div><p style={lbl}>Contact</p><p style={sm}>{order.email}</p><p style={sm}>Store: {order.department}</p></div>
-                      <div>
-                        <p style={lbl}>Payment</p>
-                        <p style={sm}>{payMethod?.label}</p>
-                        <p style={{...sm,color:"#bbb"}}>{payMethod?.handle}</p>
-                      </div>
-                      {order.notes && <div><p style={lbl}>Notes</p><p style={{...sm,fontStyle:"italic",color:"#888"}}>{order.notes}</p></div>}
-                      {order.couponCode && <div><p style={lbl}>Coupon</p><p style={{...sm,color:"#166534",fontWeight:600}}>{order.couponCode} (−{formatCurrency(order.discount||0)})</p></div>}
-                    </div>
-                    <p style={lbl}>Items</p>
-                    <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
-                      {order.items.map((item,i) => (
-                        <div key={i} style={{ background:"#fff", border:"1px solid #EAEAEA", borderRadius:10, padding:"9px 13px", display:"flex", justifyContent:"space-between", fontSize:13 }}>
-                          <span><strong style={{color:"#1a1a1a"}}>{item.productName}</strong>
-                            {Object.entries(item.variants).length>0&&<span style={{color:"#bbb"}}> ({Object.entries(item.variants).map(([,v])=>v).join(", ")})</span>}
-                            <span style={{color:"#ccc"}}> ×{item.qty}</span>
-                          </span>
-                          <span style={{fontWeight:700,color:"#1a1a1a"}}>{formatCurrency(item.subtotal)}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
-                      <button onClick={() => printPackingSlip(order, payMethod)} style={{ ...smBtn("#1a1a1a"), display:"flex", alignItems:"center", gap:6 }}>🖨️ Print Packing Slip</button>
-                      {confirmDel===order.id ? (
-                        <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                          <span style={{fontSize:13,color:"#A22325",fontWeight:500}}>Delete this order?</span>
-                          <button onClick={()=>{deleteOrder(order.id);setConfirmDel(null);}} style={smBtn("#A22325")}>Yes, delete</button>
-                          <button onClick={()=>setConfirmDel(null)} style={smBtn("#888")}>Cancel</button>
-                        </div>
-                      ) : (
-                        <button onClick={()=>setConfirmDel(order.id)} style={smBtn("#EAEAEA","#999")}>Delete Order</button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {ordersLoading ? (
+        <div style={{ textAlign:"center", padding:"60px 0" }}><p style={{ fontSize:32 }}>⏳</p><p style={{ color:"#bbb", marginTop:12 }}>Loading orders…</p></div>
+      ) : (<>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(190px, 1fr))", gap:16, marginBottom:28 }}>
+          <StatCard label="Total Orders"  value={orders.length} sub={`${orders.filter(o=>o.status==="pending").length} pending`} />
+          <StatCard label="Total Revenue" value={formatCurrency(totalRev)} sub="all orders" />
+          <StatCard label="Collected"     value={formatCurrency(paidRev)} sub={`${orders.filter(o=>o.paid).length} paid`} accent="#166534" />
+          <StatCard label="Outstanding"   value={formatCurrency(totalRev-paidRev)} sub={`${orders.filter(o=>!o.paid).length} unpaid`} accent="#A22325" />
         </div>
-      )}
+
+        <div style={{ background:"#fff", borderRadius:14, padding:"14px 18px", marginBottom:14, display:"flex", gap:12, flexWrap:"wrap", alignItems:"center", border:"1px solid #EAEAEA", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
+          <input type="text" placeholder="Search by name, email, order ID..." value={search} onChange={e=>setSearch(e.target.value)}
+            style={{ flex:1, minWidth:180, padding:"10px 14px", border:"1.5px solid #EAEAEA", borderRadius:10, fontSize:13, outline:"none", background:"#F7F7F7", color:"#1a1a1a" }} />
+          <FilterGroup label="Status:" value={filter} onChange={setFilter}
+            options={[["all","All"],["pending","Pending"],["processing","Processing"],["fulfilled","Fulfilled"],["cancelled","Cancelled"]]} />
+          <FilterGroup label="Paid:" value={paidFilter} onChange={setPaidFilter}
+            options={[["all","All"],["paid","Paid"],["unpaid","Unpaid"]]} />
+          <FilterGroup label="Payment:" value={paymentFilter} onChange={setPaymentFilter}
+            options={[["all","All"],...paymentMethods.map(p=>[p.id,p.label])]} />
+        </div>
+
+        {filtered.length === 0 ? <EmptyState icon="📭" text="No orders match your filters." /> : (
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {filtered.map(order => {
+              const isExp     = expanded===order.id;
+              const statusSty = STATUS_COLORS[order.status]||STATUS_COLORS.pending;
+              const payMethod = paymentMethods.find(p=>p.id===order.paymentMethod);
+              return (
+                <div key={order.id} style={{ background:"#fff", border:"1px solid #EAEAEA", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.04)", borderLeft:`4px solid ${order.paid?"#16a34a":"#A22325"}` }}>
+                  <div onClick={() => setExpanded(isExp?null:order.id)}
+                    style={{ padding:"14px 18px", display:"grid", gridTemplateColumns:"1fr 100px 90px 130px 110px 36px", gap:12, alignItems:"center", cursor:"pointer", transition:"background 0.1s" }}
+                    onMouseEnter={e=>e.currentTarget.style.background="#FAFAFA"}
+                    onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                    <div>
+                      <p style={{ fontWeight:600, fontSize:14, color:"#1a1a1a", marginBottom:3 }}>{order.name}</p>
+                      <p style={{ fontSize:12, color:"#bbb", fontFamily:"monospace" }}>{order.id}</p>
+                      <p style={{ fontSize:12, color:"#ccc" }}>{formatDate(order.date)} · Store {order.department}</p>
+                    </div>
+                    <span style={{ fontSize:13, color:"#888" }}>{order.items.length} item{order.items.length!==1?"s":""}</span>
+                    <span style={{ fontWeight:800, fontSize:15, color:"#1a1a1a" }}>{formatCurrency(order.total)}</span>
+                    <select value={order.status} onChange={e=>{e.stopPropagation();updateOrder(order.id,{status:e.target.value});}} onClick={e=>e.stopPropagation()}
+                      style={{ background:statusSty.bg, color:statusSty.color, border:`1px solid ${statusSty.border}`, borderRadius:8, padding:"6px 10px", fontSize:12, fontWeight:600, cursor:"pointer", outline:"none" }}>
+                      {STATUS_OPTIONS.map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+                    </select>
+                    <label onClick={e=>e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
+                      <input type="checkbox" checked={order.paid} onChange={e=>updateOrder(order.id,{paid:e.target.checked})} style={{ accentColor:"#A22325", width:15, height:15 }} />
+                      <span style={{ fontSize:12, color:order.paid?"#166534":"#A22325", fontWeight:700 }}>{order.paid?"Paid":"Unpaid"}</span>
+                    </label>
+                    <span style={{ color:"#ccc", fontSize:14 }}>{isExp?"▲":"▼"}</span>
+                  </div>
+                  {isExp && (
+                    <div style={{ borderTop:"1px solid #F0F0F0", padding:"18px", background:"#FAFAFA" }}>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
+                        <div><p style={lbl}>Contact</p><p style={sm}>{order.email}</p><p style={sm}>Store: {order.department}</p></div>
+                        <div><p style={lbl}>Payment</p><p style={sm}>{payMethod?.label}</p><p style={{...sm,color:"#bbb"}}>{payMethod?.handle}</p></div>
+                        {order.notes && <div><p style={lbl}>Notes</p><p style={{...sm,fontStyle:"italic",color:"#888"}}>{order.notes}</p></div>}
+                        {order.couponCode && <div><p style={lbl}>Coupon</p><p style={{...sm,color:"#166634",fontWeight:600}}>{order.couponCode} (−{formatCurrency(order.discount||0)})</p></div>}
+                      </div>
+                      <p style={lbl}>Items</p>
+                      <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
+                        {order.items.map((item,i) => (
+                          <div key={i} style={{ background:"#fff", border:"1px solid #EAEAEA", borderRadius:10, padding:"9px 13px", display:"flex", justifyContent:"space-between", fontSize:13 }}>
+                            <span><strong style={{color:"#1a1a1a"}}>{item.productName}</strong>
+                              {Object.entries(item.variants).length>0&&<span style={{color:"#bbb"}}> ({Object.entries(item.variants).map(([,v])=>v).join(", ")})</span>}
+                              <span style={{color:"#ccc"}}> ×{item.qty}</span>
+                            </span>
+                            <span style={{fontWeight:700,color:"#1a1a1a"}}>{formatCurrency(item.subtotal)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+                        <button onClick={() => printPackingSlip(order, payMethod)} style={{ ...smBtn("#1a1a1a"), display:"flex", alignItems:"center", gap:6 }}>🖨️ Print Packing Slip</button>
+                        {confirmDel===order.id ? (
+                          <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                            <span style={{fontSize:13,color:"#A22325",fontWeight:500}}>Delete this order?</span>
+                            <button onClick={()=>{deleteOrder(order.id);setConfirmDel(null);}} style={smBtn("#A22325")}>Yes, delete</button>
+                            <button onClick={()=>setConfirmDel(null)} style={smBtn("#888")}>Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={()=>setConfirmDel(order.id)} style={smBtn("#EAEAEA","#999")}>Delete Order</button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </>)}
     </div>
   );
@@ -325,10 +441,13 @@ function ProductsTab() {
   };
   const removeVariant = (key) => setForm(f => {
     const v={...f.variants}; delete v[key];
-    const vi={...f.variantImages}; Object.keys(vi).forEach(k=>{if(k.startsWith(key+":"))delete vi[k];}); return {...f,variants:v,variantImages:vi};
+    // Remove all variantImage combos that reference this variant key
+    const vi={};
+    Object.entries(f.variantImages).forEach(([k,img]) => {
+      if (!k.split("|").some(p => p.split(":")[0] === key)) vi[k]=img;
+    });
+    return {...f, variants:v, variantImages:vi};
   });
-  const setVariantImage   = (vk, ov, img) => setForm(f => ({...f, variantImages:{...f.variantImages,[`${vk}:${ov}`]:img}}));
-  const getVariantImage   = (vk, ov) => form.variantImages?.[`${vk}:${ov}`]||"";
 
   const handleSave = async () => {
     if (!form.name.trim()||!form.price) { setMsg("Name and price are required."); return; }
@@ -336,7 +455,7 @@ function ProductsTab() {
     try {
       if (editing==="new") await addProduct(data); else await updateProduct(editing, data);
       close();
-    } catch (e) { setMsg("Could not save product. Please try again."); }
+    } catch { setMsg("Could not save product. Please try again."); }
   };
 
   return (
@@ -383,14 +502,14 @@ function ProductsTab() {
 
       {editing !== null && (
         <div onClick={close} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", backdropFilter:"blur(3px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:300, padding:20 }}>
-          <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:620, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 64px rgba(0,0,0,0.15)" }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:640, maxHeight:"92vh", overflowY:"auto", boxShadow:"0 24px 64px rgba(0,0,0,0.15)" }}>
             <div style={{ padding:"22px 28px", borderBottom:"1px solid #EAEAEA", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:"#fff", zIndex:10 }}>
               <h3 style={{ fontFamily:"'Georgia', serif", fontSize:20, color:"#1a1a1a" }}>{editing==="new"?"Add Product":"Edit Product"}</h3>
               <button onClick={close} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#bbb" }}>×</button>
             </div>
             <div style={{ padding:"24px 28px", display:"grid", gap:20 }}>
               <PField label="Product Name *"><input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} style={pInp} placeholder="Classic Logo Tee" /></PField>
-              <PField label="Description"><textarea value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} rows={3} style={{...pInp,resize:"vertical"}} placeholder="Short product description..." /></PField>
+              <PField label="Description"><textarea value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} rows={3} style={{...pInp,resize:"vertical"}} /></PField>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <PField label="Sell Price ($) *"><input type="number" min="0" step="0.01" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} style={pInp} placeholder="0.00" /></PField>
                 <PField label="Cost ($) — Admin only"><input type="number" min="0" step="0.01" value={form.cost||""} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} style={{...pInp,borderColor:"#F5E0C0",background:"#FFFBF5"}} placeholder="0.00" /></PField>
@@ -400,28 +519,20 @@ function ProductsTab() {
                   {CATEGORIES.map(c=><option key={c}>{c}</option>)}
                 </select>
               </PField>
-              <PField label="Main Product Image"><ImageUploader value={form.image} onChange={img=>setForm(f=>({...f,image:img}))} label="Upload Main Image" /></PField>
+              <PField label="Main Product Image">
+                <ImageUploader value={form.image} onChange={img=>setForm(f=>({...f,image:img}))} label="Upload Main Image" />
+              </PField>
+
+              {/* Variants */}
               <div>
-                <p style={{ fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#aaa", marginBottom:12 }}>Variants & Images</p>
+                <p style={{ fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#aaa", marginBottom:12 }}>Variants</p>
                 {Object.entries(form.variants).map(([key,vals]) => (
-                  <div key={key} style={{ background:"#F7F7F7", border:"1px solid #EAEAEA", borderRadius:12, padding:"16px", marginBottom:12 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                      <span style={{ fontSize:13, fontWeight:700, color:"#1a1a1a" }}>{key}</span>
-                      <button onClick={()=>removeVariant(key)} style={{ background:"none", border:"none", color:"#A22325", cursor:"pointer", fontSize:13, fontWeight:600 }}>Remove variant</button>
-                    </div>
-                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(120px, 1fr))", gap:12 }}>
-                      {vals.map(opt => (
-                        <div key={opt} style={{ textAlign:"center" }}>
-                          <ImageUploader value={getVariantImage(key,opt)} onChange={img=>setVariantImage(key,opt,img)} small={true} />
-                          <p style={{ fontSize:12, color:"#555", marginTop:5, fontWeight:500 }}>{opt}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <p style={{ fontSize:11, color:"#ccc", marginTop:10 }}>Upload an image per option — it will show when the customer selects it.</p>
+                  <div key={key} style={{ background:"#F7F7F7", border:"1px solid #EAEAEA", borderRadius:10, padding:"12px 14px", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span><span style={{fontSize:13,fontWeight:600,color:"#333"}}>{key}:</span> <span style={{fontSize:13,color:"#777"}}>{vals.join(", ")}</span></span>
+                    <button onClick={()=>removeVariant(key)} style={{ background:"none", border:"none", color:"#A22325", cursor:"pointer", fontSize:18 }}>×</button>
                   </div>
                 ))}
-                <div style={{ border:"1.5px dashed #EAEAEA", borderRadius:12, padding:"14px 16px", background:"#fff" }}>
-                  <p style={{ fontSize:12, color:"#bbb", marginBottom:10, fontWeight:500 }}>Add a new variant</p>
+                <div style={{ border:"1.5px dashed #EAEAEA", borderRadius:10, padding:"12px 14px" }}>
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr auto", gap:8 }}>
                     <input value={variantKey} onChange={e=>setVariantKey(e.target.value)} style={pInp} placeholder="e.g. Color" />
                     <input value={variantVals} onChange={e=>setVariantVals(e.target.value)} style={pInp} placeholder="Red, Blue, Green" />
@@ -429,6 +540,18 @@ function ProductsTab() {
                   </div>
                 </div>
               </div>
+
+              {/* Variant Image Combos */}
+              {Object.keys(form.variants).length > 0 && (
+                <div style={{ borderTop:"1px solid #EAEAEA", paddingTop:20 }}>
+                  <VariantImageCombos
+                    variants={form.variants}
+                    variantImages={form.variantImages}
+                    onChange={vi => setForm(f => ({...f, variantImages: vi}))}
+                  />
+                </div>
+              )}
+
               {msg && <p style={{ fontSize:13, color:"#A22325" }}>{msg}</p>}
               <div style={{ display:"flex", gap:10 }}>
                 <button onClick={handleSave} style={{...actionBtn("#A22325"),flex:1,padding:"13px"}}>{editing==="new"?"Add Product":"Save Changes"}</button>
@@ -502,7 +625,7 @@ function CouponsTab() {
               <PField label="Description"><input value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} style={pInp} placeholder="20% off entire order" /></PField>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                 <PField label="Type"><select value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))} style={pInp}><option value="percent">Percentage (%)</option><option value="fixed">Fixed ($)</option></select></PField>
-                <PField label={form.type==="percent"?"Percent *":"Amount *"}><input type="number" min="0" step={form.type==="percent"?"1":"0.01"} value={form.value} onChange={e=>setForm(f=>({...f,value:e.target.value}))} style={pInp} placeholder={form.type==="percent"?"10":"5.00"} /></PField>
+                <PField label={form.type==="percent"?"Percent *":"Amount *"}><input type="number" min="0" value={form.value} onChange={e=>setForm(f=>({...f,value:e.target.value}))} style={pInp} /></PField>
               </div>
               <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontSize:14, color:"#555" }}>
                 <input type="checkbox" checked={form.active} onChange={e=>setForm(f=>({...f,active:e.target.checked}))} style={{ accentColor:"#A22325", width:16, height:16 }} />
@@ -526,13 +649,11 @@ function SuggestionsTab() {
   const { suggestions, suggestionsLoading, loadSuggestions, markSuggestionReviewed, deleteSuggestion } = useStore();
   const [filter, setFilter]         = useState("all");
   const [confirmDel, setConfirmDel] = useState(null);
-
   const filtered = suggestions.filter(s => {
-    if (filter === "reviewed")   return s.reviewed;
-    if (filter === "unreviewed") return !s.reviewed;
+    if (filter==="reviewed")   return s.reviewed;
+    if (filter==="unreviewed") return !s.reviewed;
     return true;
   });
-
   return (
     <div style={{ maxWidth:900, margin:"0 auto" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:28, flexWrap:"wrap", gap:12 }}>
@@ -542,14 +663,12 @@ function SuggestionsTab() {
         </div>
         <button onClick={loadSuggestions} style={actionBtn("#666")}>↻ Refresh</button>
       </div>
-
       <div style={{ background:"#fff", borderRadius:14, padding:"12px 16px", marginBottom:16, display:"flex", gap:8, border:"1px solid #EAEAEA" }}>
         <FilterGroup label="Show:" value={filter} onChange={setFilter}
           options={[["all","All"],["unreviewed","Unreviewed"],["reviewed","Reviewed"]]} />
       </div>
-
-      {suggestionsLoading ? <div style={{ textAlign:"center", padding:"60px 0" }}><p style={{ fontSize:32 }}>⏳</p><p style={{ color:"#bbb", marginTop:12 }}>Loading suggestions…</p></div>
-      : filtered.length === 0 ? <EmptyState icon="💡" text="No suggestions yet." />
+      {suggestionsLoading ? <div style={{ textAlign:"center", padding:"60px 0" }}><p style={{ fontSize:32 }}>⏳</p><p style={{ color:"#bbb", marginTop:12 }}>Loading…</p></div>
+      : filtered.length===0 ? <EmptyState icon="💡" text="No suggestions yet." />
       : (
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
           {filtered.map(s => (
@@ -560,7 +679,7 @@ function SuggestionsTab() {
                   <p style={{ fontSize:12, color:"#bbb" }}>Store {s.storeNumber} · {formatDate(s.date)}</p>
                 </div>
                 <span style={{ fontSize:11, fontWeight:700, padding:"4px 12px", borderRadius:20, background:s.reviewed?"#F0FDF4":"#FFF0F0", color:s.reviewed?"#166534":"#A22325", border:`1px solid ${s.reviewed?"#BBF7D0":"rgba(162,35,37,0.2)"}` }}>
-                  {s.reviewed ? "✓ Reviewed" : "Needs Review"}
+                  {s.reviewed?"✓ Reviewed":"Needs Review"}
                 </span>
               </div>
               <div style={{ background:"#F7F7F7", borderRadius:10, padding:"14px 16px", marginBottom:s.question?12:16 }}>
@@ -574,9 +693,8 @@ function SuggestionsTab() {
                 </div>
               )}
               <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                <button onClick={() => markSuggestionReviewed(s.id, !s.reviewed)}
-                  style={{ ...smBtn(s.reviewed?"#EAEAEA":"#1a1a1a", s.reviewed?"#888":"#fff") }}>
-                  {s.reviewed ? "Mark Unreviewed" : "✓ Mark Reviewed"}
+                <button onClick={()=>markSuggestionReviewed(s.id,!s.reviewed)} style={smBtn(s.reviewed?"#EAEAEA":"#1a1a1a",s.reviewed?"#888":"#fff")}>
+                  {s.reviewed?"Mark Unreviewed":"✓ Mark Reviewed"}
                 </button>
                 {confirmDel===s.id ? (
                   <div style={{display:"flex",gap:10,alignItems:"center"}}>
@@ -584,9 +702,7 @@ function SuggestionsTab() {
                     <button onClick={()=>{deleteSuggestion(s.id);setConfirmDel(null);}} style={smBtn("#A22325")}>Yes</button>
                     <button onClick={()=>setConfirmDel(null)} style={smBtn("#888")}>No</button>
                   </div>
-                ) : (
-                  <button onClick={()=>setConfirmDel(s.id)} style={smBtn("#EAEAEA","#999")}>Delete</button>
-                )}
+                ) : <button onClick={()=>setConfirmDel(s.id)} style={smBtn("#EAEAEA","#999")}>Delete</button>}
               </div>
             </div>
           ))}
