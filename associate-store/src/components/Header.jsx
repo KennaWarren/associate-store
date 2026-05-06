@@ -17,7 +17,7 @@ export default function Header({ page, setPage }) {
         {/* Logo */}
         <button onClick={() => setPage("shop")} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:12, padding:0 }}>
           <div style={{ width:36, height:36, background:"#A22325", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 2px 8px rgba(162,35,37,0.3)" }}>
-            <span style={{ color:"#fff", fontSize:16, fontWeight:800, fontFamily:"Georgia, serif" }}>A</span>
+            <span style={{ color:"#fff", fontSize:16, fontWeight:800, fontFamily:"Georgia, serif" }}>&</span>
           </div>
           <div style={{ textAlign:"left" }}>
             <div style={{ fontSize:14, fontWeight:700, color:"#1a1a1a", letterSpacing:"0.04em" }}>Rogers & Hollands | Ashcroft & Oak</div>
