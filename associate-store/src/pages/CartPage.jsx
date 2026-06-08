@@ -10,16 +10,18 @@ export default function CartPage({ setPage }) {
   const { cart, removeFromCart, updateQty, cartSubtotal, discount, cartTotal,
           appliedCoupon, applyCoupon, removeCoupon, placeOrder } = useStore();
 
+  // steps: "cart" | "checkout" | "payroll_agree" | "payment" | "confirm"
   const [step, setStep]               = useState("cart");
   const [lastOrder, setLastOrder]     = useState(null);
   const [savedTotal, setSavedTotal]   = useState(0);
+  const [savedForm, setSavedForm]     = useState(null); // store form until payment confirmed
   const [submitting, setSubmitting]   = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponMsg, setCouponMsg]     = useState(null);
-  const [payrollAgreed, setPayrollAgreed]     = useState(false);
+  const [payrollAgreed, setPayrollAgreed]       = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  const [form, setForm]   = useState({ name:"", email:"", department:"", paymentMethod:"venmo", notes:"" });
+  const [form, setForm] = useState({ name:"", email:"", department:"", paymentMethod:"venmo", notes:"" });
   const [errors, setErrors] = useState({});
 
   const validateEmail = (email) => {
@@ -27,20 +29,18 @@ export default function CartPage({ setPage }) {
     if (!EMAIL_REGEX.test(email.trim()))  return "Please enter a valid email address (e.g. name@company.com)";
     return null;
   };
-
   const validateStore = (store) => {
-    if (!store.trim())                   return "Required";
-    if (!STORE_REGEX.test(store.trim())) return "Store number must be exactly 5 digits (e.g. 10001)";
+    if (!store.trim())                    return "Required";
+    if (!STORE_REGEX.test(store.trim()))  return "Store number must be exactly 5 digits (e.g. 00042)";
     return null;
   };
-
   const validate = () => {
     const e = {};
-    if (!form.name.trim())       e.name       = "Required";
+    if (!form.name.trim())          e.name       = "Required";
     const emailErr = validateEmail(form.email);
-    if (emailErr)                 e.email      = emailErr;
+    if (emailErr)                   e.email      = emailErr;
     const storeErr = validateStore(form.department);
-    if (storeErr)                 e.department = storeErr;
+    if (storeErr)                   e.department = storeErr;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -52,15 +52,12 @@ export default function CartPage({ setPage }) {
       setErrors(e => ({ ...e, email: err || undefined }));
     }
   };
-
   const handleEmailBlur = () => {
     const err = validateEmail(form.email);
     if (err) setErrors(e => ({ ...e, email: err }));
     else     setErrors(e => { const n={...e}; delete n.email; return n; });
   };
-
   const handleStoreChange = (val) => {
-    // Only allow digits, max 5
     const digits = val.replace(/\D/g, "").slice(0, 5);
     setForm(f => ({ ...f, department: digits }));
     if (errors.department) {
@@ -68,7 +65,6 @@ export default function CartPage({ setPage }) {
       setErrors(e => ({ ...e, department: err || undefined }));
     }
   };
-
   const handleStoreBlur = () => {
     const err = validateStore(form.department);
     if (err) setErrors(e => ({ ...e, department: err }));
@@ -84,14 +80,16 @@ export default function CartPage({ setPage }) {
     );
   };
 
-  const doPlaceOrder = async () => {
-    const totalSnapshot = cartTotal;
-    setSavedTotal(totalSnapshot);
+  // Actually submit order to Airtable
+  const doPlaceOrder = async (formData, paymentConfirmedByUser = false) => {
     setSubmitting(true); setSubmitError(null);
     try {
-      const order = await placeOrder(form);
+      const order = await placeOrder({
+        ...formData,
+        paymentConfirmedByUser, // passed through to StoreContext
+      });
       setLastOrder(order);
-      return { order, total: totalSnapshot };
+      return order;
     } catch (e) {
       setSubmitError("Something went wrong. Please try again.");
       return null;
@@ -100,24 +98,36 @@ export default function CartPage({ setPage }) {
     }
   };
 
+  // "Place Order" clicked — for Venmo/PayPal, just capture the total and go to payment screen
+  // DON'T submit to Airtable yet
   const handleCheckoutSubmit = async () => {
     if (!validate()) return;
     if (form.paymentMethod === "payroll") {
       setStep("payroll_agree");
     } else {
-      const result = await doPlaceOrder();
-      if (result) setStep("payment");
+      // Save the total and form NOW before moving forward
+      setSavedTotal(cartTotal);
+      setSavedForm({ ...form });
+      setStep("payment"); // go to payment screen first
     }
   };
 
+  // Payroll agreement confirmed — submit order immediately (payroll = confirmed by agreement)
   const handlePayrollConfirm = async () => {
-    const result = await doPlaceOrder();
-    if (result) setStep("confirm");
+    setSavedTotal(cartTotal);
+    const order = await doPlaceOrder(form, true);
+    if (order) setStep("confirm");
   };
 
-  const handlePaymentDone = () => setStep("confirm");
+  // Employee checks "I have paid" checkbox and clicks confirm
+  // NOW we submit the order to Airtable
+  const handlePaymentDone = async () => {
+    const order = await doPlaceOrder(savedForm, true);
+    if (order) setStep("confirm");
+  };
 
   const pm = paymentMethods.find(m => m.id === form.paymentMethod);
+  const savedPm = paymentMethods.find(m => m.id === savedForm?.paymentMethod);
 
   // ── Empty cart ──
   if (cart.length === 0 && step === "cart") {
@@ -181,49 +191,74 @@ export default function CartPage({ setPage }) {
     );
   }
 
-  // ── Payment Step ──
-  if (step === "payment" && lastOrder) {
-    const payLink = pm?.link
-      ? `${pm.link}?amount=${savedTotal.toFixed(2)}&note=${encodeURIComponent(`Associate Store Order ${lastOrder.id}`)}`
-      : pm?.link;
+  // ── Payment Step (Venmo / PayPal) ──
+  // Order has NOT been submitted yet — only submits when checkbox is confirmed
+  if (step === "payment") {
+    const payLink = savedPm?.link
+      ? `${savedPm.link}?amount=${savedTotal.toFixed(2)}&note=${encodeURIComponent(`Associate Store Order - ${savedForm?.name}`)}`
+      : savedPm?.link;
+
     return (
       <div style={{ background:"#F7F7F7", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
         <div style={{ background:"#fff", borderRadius:20, padding:"48px 40px", maxWidth:520, width:"100%", textAlign:"center", border:"1px solid #EAEAEA", boxShadow:"0 8px 40px rgba(0,0,0,0.08)" }}>
           <div style={{ background:"#FFFBEB", border:"1.5px solid #FDE68A", borderRadius:12, padding:"14px 18px", marginBottom:28 }}>
-            <p style={{ fontSize:14, color:"#92400E", fontWeight:700, marginBottom:4 }}>⚠️ Action Required — Payment Not Yet Sent</p>
-            <p style={{ fontSize:13, color:"#92400E" }}>Your order has been placed but <strong>payment has not been received</strong>. You must complete payment to finalize your order.</p>
+            <p style={{ fontSize:14, color:"#92400E", fontWeight:700, marginBottom:4 }}>⚠️ Payment Required to Complete Order</p>
+            <p style={{ fontSize:13, color:"#92400E" }}>Your order is <strong>not yet placed</strong>. Please send payment below, then confirm to complete your order.</p>
           </div>
-          <h2 style={{ fontFamily:"'Georgia', serif", fontSize:24, color:"#1a1a1a", marginBottom:8 }}>Complete Your Payment</h2>
-          <p style={{ fontSize:15, color:"#555", marginBottom:6 }}>Order <span style={{ fontFamily:"monospace", color:"#A22325", fontWeight:700 }}>{lastOrder.id}</span></p>
+
+          <h2 style={{ fontFamily:"'Georgia', serif", fontSize:24, color:"#1a1a1a", marginBottom:8 }}>Send Your Payment</h2>
+          <p style={{ fontSize:15, color:"#555", marginBottom:6 }}>Hi {savedForm?.name?.split(" ")[0]} — almost done!</p>
           <p style={{ fontSize:28, fontWeight:800, color:"#A22325", marginBottom:28 }}>{formatCurrency(savedTotal)}</p>
+
           <div style={{ background:"#F7F7F7", borderRadius:14, padding:"20px 24px", marginBottom:24, textAlign:"left" }}>
             <p style={{ fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#bbb", marginBottom:12 }}>Send payment to</p>
-            <p style={{ fontSize:16, fontWeight:700, color:"#1a1a1a", marginBottom:4 }}>{pm?.label}</p>
-            <p style={{ fontSize:14, color:"#555", marginBottom:4 }}>{pm?.handle}</p>
-            <p style={{ fontSize:13, color:"#888" }}>Include in your payment note: <strong style={{ color:"#1a1a1a" }}>{lastOrder.id}</strong></p>
+            <p style={{ fontSize:16, fontWeight:700, color:"#1a1a1a", marginBottom:4 }}>{savedPm?.label}</p>
+            <p style={{ fontSize:14, color:"#555", marginBottom:4 }}>{savedPm?.handle}</p>
+            <p style={{ fontSize:13, color:"#888" }}>
+              Include your name in the payment note: <strong style={{ color:"#1a1a1a" }}>{savedForm?.name}</strong>
+            </p>
           </div>
-          {pm?.link && (
+
+          {savedPm?.link && (
             <a href={payLink} target="_blank" rel="noopener noreferrer" style={{
               display:"block", background:"#1a1a1a", color:"#fff",
               borderRadius:12, padding:"15px", fontSize:15, fontWeight:700,
               textDecoration:"none", marginBottom:16, letterSpacing:"0.04em",
               boxShadow:"0 4px 16px rgba(0,0,0,0.15)",
-            }}>Open {pm.label} to Pay →</a>
+            }}>Open {savedPm.label} to Pay →</a>
           )}
+
+          {/* Confirmation checkbox */}
           <label style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer", background:"#F0FDF4", border:"1.5px solid #BBF7D0", borderRadius:12, padding:"14px 16px", marginBottom:16, textAlign:"left" }}>
             <input type="checkbox" checked={paymentConfirmed} onChange={e => setPaymentConfirmed(e.target.checked)}
               style={{ accentColor:"#166534", width:18, height:18, flexShrink:0 }} />
-            <span style={{ fontSize:14, color:"#166634", fontWeight:600, lineHeight:1.5 }}>
-              I have sent {formatCurrency(savedTotal)} via {pm?.label} with reference {lastOrder.id}
+            <span style={{ fontSize:14, color:"#166534", fontWeight:600, lineHeight:1.5 }}>
+              I have sent {formatCurrency(savedTotal)} via {savedPm?.label}
             </span>
           </label>
-          <button onClick={handlePaymentDone} disabled={!paymentConfirmed} style={{
-            width:"100%", background: paymentConfirmed ? "#2d7a2d" : "#EAEAEA",
-            color: paymentConfirmed ? "#fff" : "#aaa", border:"none", borderRadius:12, padding:"15px",
-            fontSize:14, fontWeight:700, cursor: paymentConfirmed ? "pointer" : "not-allowed",
-            boxShadow: paymentConfirmed ? "0 4px 16px rgba(45,122,45,0.3)" : "none", transition:"all 0.2s",
-          }}>✓ Payment Sent — View Confirmation</button>
-          <p style={{ fontSize:12, color:"#ccc", marginTop:14 }}>If you have trouble paying, contact your store manager.</p>
+
+          {submitError && <p style={{ fontSize:13, color:"#A22325", marginBottom:12 }}>{submitError}</p>}
+
+          <button onClick={handlePaymentDone} disabled={!paymentConfirmed || submitting} style={{
+            width:"100%",
+            background: paymentConfirmed && !submitting ? "#2d7a2d" : "#EAEAEA",
+            color: paymentConfirmed && !submitting ? "#fff" : "#aaa",
+            border:"none", borderRadius:12, padding:"15px",
+            fontSize:14, fontWeight:700,
+            cursor: paymentConfirmed && !submitting ? "pointer" : "not-allowed",
+            boxShadow: paymentConfirmed ? "0 4px 16px rgba(45,122,45,0.3)" : "none",
+            transition:"all 0.2s",
+          }}>
+            {submitting ? "Placing Order…" : "✓ Payment Sent — Complete Order"}
+          </button>
+
+          <button onClick={() => setStep("checkout")} style={{ background:"none", border:"none", color:"#bbb", fontSize:12, cursor:"pointer", marginTop:12, textDecoration:"underline" }}>
+            ← Go back to checkout
+          </button>
+
+          <p style={{ fontSize:12, color:"#ccc", marginTop:10 }}>
+            Your order will only be recorded after you confirm payment above.
+          </p>
         </div>
       </div>
     );
@@ -232,6 +267,7 @@ export default function CartPage({ setPage }) {
   // ── Confirmation Screen ──
   if (step === "confirm" && lastOrder) {
     const isPayroll = lastOrder.paymentMethod === "payroll";
+    const confirmPm = paymentMethods.find(m => m.id === lastOrder.paymentMethod);
     return (
       <div style={{ background:"#F7F7F7", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
         <div style={{ background:"#fff", borderRadius:20, padding:"52px 44px", maxWidth:520, width:"100%", textAlign:"center", border:"1px solid #EAEAEA", boxShadow:"0 8px 40px rgba(0,0,0,0.08)" }}>
@@ -242,11 +278,12 @@ export default function CartPage({ setPage }) {
             {isPayroll ? "Order Complete!" : `Thank You, ${lastOrder.name.split(" ")[0]}!`}
           </h2>
           <p style={{ color:"#aaa", fontSize:15, marginBottom:6 }}>
-            {isPayroll ? "Your payroll deduction has been authorized." : "Your order and payment have been received."}
+            {isPayroll ? "Your payroll deduction has been authorized." : "Your order has been placed and payment received."}
           </p>
           <p style={{ display:"inline-block", fontSize:12, color:"#A22325", fontWeight:700, letterSpacing:"0.08em", fontFamily:"monospace", background:"#FFF0F0", padding:"5px 14px", borderRadius:8, marginBottom:32, border:"1px solid rgba(162,35,37,0.15)" }}>
             {lastOrder.id}
           </p>
+
           <div style={{ background:"#F7F7F7", borderRadius:14, padding:"20px 24px", marginBottom:20, textAlign:"left" }}>
             <p style={{ fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#bbb", marginBottom:14 }}>Order Summary</p>
             {lastOrder.items.map((item,i) => (
@@ -270,7 +307,8 @@ export default function CartPage({ setPage }) {
               <span style={{ color:"#A22325" }}>{formatCurrency(lastOrder.total)}</span>
             </div>
           </div>
-          <button onClick={() => { setStep("cart"); setLastOrder(null); setPayrollAgreed(false); setPaymentConfirmed(false); setPage("shop"); }} style={primaryBtn}>
+
+          <button onClick={() => { setStep("cart"); setLastOrder(null); setPayrollAgreed(false); setPaymentConfirmed(false); setSavedForm(null); setPage("shop"); }} style={primaryBtn}>
             Continue Shopping
           </button>
         </div>
@@ -286,6 +324,7 @@ export default function CartPage({ setPage }) {
           {step==="cart" ? "Your Cart" : "Checkout"}
         </h1>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:28, alignItems:"start" }}>
+
           {/* Left */}
           <div>
             {step === "cart" && (
@@ -341,67 +380,42 @@ export default function CartPage({ setPage }) {
                 <h2 style={{ fontSize:17, fontWeight:700, color:"#1a1a1a", marginBottom:28 }}>Your Information</h2>
                 <div style={{ display:"grid", gap:20 }}>
                   <Field label="Full Name *" error={errors.name}>
-                    <input
-                      value={form.name}
-                      onChange={e => setForm(f=>({...f,name:e.target.value}))}
+                    <input value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))}
                       onBlur={() => { if (!form.name.trim()) setErrors(e=>({...e,name:"Required"})); else setErrors(e=>{const n={...e};delete n.name;return n;}); }}
-                      style={inp(errors.name)} placeholder="Jane Smith"
-                    />
+                      style={inp(errors.name)} placeholder="Jane Smith" />
                   </Field>
-
                   <Field label="Work Email *" error={errors.email}>
-                    <input
-                      value={form.email}
-                      onChange={e => handleEmailChange(e.target.value)}
-                      onBlur={handleEmailBlur}
-                      style={inp(errors.email)}
-                      placeholder="jane@company.com"
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                    />
-                    {!errors.email && form.email && !EMAIL_REGEX.test(form.email.trim()) && (
-                      <p style={{ fontSize:12, color:"#A22325", marginTop:5 }}>
-                        Please enter a valid email address (e.g. name@company.com)
-                      </p>
-                    )}
+                    <input value={form.email} onChange={e => handleEmailChange(e.target.value)}
+                      onBlur={handleEmailBlur} style={inp(errors.email)}
+                      placeholder="jane@company.com" type="email" inputMode="email" autoComplete="email" />
                   </Field>
-
                   <Field label="Store Number *" error={errors.department}>
-                    <input
-                      value={form.department}
-                      onChange={e => handleStoreChange(e.target.value)}
-                      onBlur={handleStoreBlur}
-                      style={inp(errors.department)}
-                      placeholder="5-digit store number (e.g. 10001)"
-                      inputMode="numeric"
-                      maxLength={5}
-                    />
+                    <input value={form.department} onChange={e => handleStoreChange(e.target.value)}
+                      onBlur={handleStoreBlur} style={inp(errors.department)}
+                      placeholder="5-digit store number (e.g. 00042)" inputMode="numeric" maxLength={5} />
                   </Field>
-
                   <Field label="Payment Method">
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
-                      {paymentMethods.map(pm => (
-                        <label key={pm.id} style={{
-                          border:"1.5px solid", borderColor:form.paymentMethod===pm.id?"#A22325":"#EAEAEA",
+                      {paymentMethods.map(m => (
+                        <label key={m.id} style={{
+                          border:"1.5px solid", borderColor:form.paymentMethod===m.id?"#A22325":"#EAEAEA",
                           borderRadius:12, padding:"12px 14px", cursor:"pointer",
-                          background:form.paymentMethod===pm.id?"#FFF0F0":"#fff",
+                          background:form.paymentMethod===m.id?"#FFF0F0":"#fff",
                           display:"flex", alignItems:"center", gap:8, transition:"all 0.15s",
-                          boxShadow:form.paymentMethod===pm.id?"0 2px 8px rgba(162,35,37,0.12)":"none",
+                          boxShadow:form.paymentMethod===m.id?"0 2px 8px rgba(162,35,37,0.12)":"none",
                         }}>
-                          <input type="radio" name="payment" value={pm.id} checked={form.paymentMethod===pm.id}
-                            onChange={() => setForm(f=>({...f,paymentMethod:pm.id}))} style={{ accentColor:"#A22325" }} />
-                          <span style={{ fontSize:13, fontWeight:600, color:form.paymentMethod===pm.id?"#A22325":"#555" }}>{pm.label}</span>
+                          <input type="radio" name="payment" value={m.id} checked={form.paymentMethod===m.id}
+                            onChange={() => setForm(f=>({...f,paymentMethod:m.id}))} style={{ accentColor:"#A22325" }} />
+                          <span style={{ fontSize:13, fontWeight:600, color:form.paymentMethod===m.id?"#A22325":"#555" }}>{m.label}</span>
                         </label>
                       ))}
                     </div>
                     {form.paymentMethod !== "payroll" && (
                       <p style={{ fontSize:12, color:"#A22325", marginTop:10, fontWeight:600, background:"#FFF0F0", padding:"8px 12px", borderRadius:8 }}>
-                        ⚠️ After placing your order you will be directed to {paymentMethods.find(p=>p.id===form.paymentMethod)?.label} to complete payment.
+                        ⚠️ You will be directed to {paymentMethods.find(p=>p.id===form.paymentMethod)?.label} to send payment before your order is placed.
                       </p>
                     )}
                   </Field>
-
                   <Field label="Notes (optional)">
                     <textarea value={form.notes} onChange={e => setForm(f=>({...f,notes:e.target.value}))} rows={3}
                       placeholder="Any special requests..." style={{ ...inp(), resize:"vertical" }} />
@@ -444,8 +458,8 @@ export default function CartPage({ setPage }) {
               {step === "checkout" && (
                 <>
                   {submitError && <p style={{ fontSize:13, color:"#A22325", textAlign:"center" }}>{submitError}</p>}
-                  <button onClick={handleCheckoutSubmit} disabled={submitting} style={{ ...primaryBtn, opacity:submitting?0.7:1, cursor:submitting?"not-allowed":"pointer" }}>
-                    {submitting ? "Placing Order…" : "Place Order →"}
+                  <button onClick={handleCheckoutSubmit} style={primaryBtn}>
+                    {form.paymentMethod === "payroll" ? "Place Order →" : "Proceed to Payment →"}
                   </button>
                   <button onClick={() => setStep("cart")} style={secondaryBtn}>← Back to Cart</button>
                 </>
@@ -467,7 +481,6 @@ function Field({ label, children, error }) {
     </div>
   );
 }
-
 const inp = (err) => ({ width:"100%", padding:"12px 14px", border:`1.5px solid ${err?"#A22325":"#EAEAEA"}`, borderRadius:10, fontSize:14, color:"#1a1a1a", outline:"none", background:"#F7F7F7", boxSizing:"border-box", transition:"border-color 0.2s" });
 const primaryBtn   = { width:"100%", background:"#A22325", color:"#fff", border:"none", borderRadius:12, padding:"15px", fontSize:14, fontWeight:700, letterSpacing:"0.04em", cursor:"pointer", textTransform:"uppercase", boxShadow:"0 4px 16px rgba(162,35,37,0.3)" };
 const secondaryBtn = { width:"100%", background:"#F7F7F7", color:"#666", border:"1.5px solid #EAEAEA", borderRadius:12, padding:"14px", fontSize:13, fontWeight:600, cursor:"pointer" };
