@@ -120,10 +120,10 @@ export function StoreProvider({ children }) {
   const deleteCoupon = (id)      => setCoupons(p => p.filter(c => c.id!==id));
 
   // ── Orders ──
-  const placeOrder = async ({ name, email, department, paymentMethod, notes }) => {
+  const placeOrder = async ({ name, email, department, paymentMethod, notes, paymentConfirmedByUser }) => {
     const isPayroll = paymentMethod === "payroll";
 
-    // Capture all values NOW before cart clears
+    // Capture all cart values NOW before clearing
     const snapSubtotal = cart.reduce((s, i) => s + i.product.price * i.qty, 0);
     const snapDiscount = appliedCoupon
       ? appliedCoupon.type === "percent"
@@ -151,36 +151,26 @@ export function StoreProvider({ children }) {
       couponCode: appliedCoupon?.code || null,
       total:      snapTotal,
       status:     "pending",
-      paid:       true,
+      // Payroll = auto paid. Venmo/PayPal = only paid if employee confirmed payment checkbox
+      paid:       isPayroll ? true : (paymentConfirmedByUser === true),
+      // Store whether employee clicked the payment confirmation checkbox
+      paymentConfirmedByUser: paymentConfirmedByUser === true,
     };
 
     const created    = await atCreateOrder(order);
     const withRecord = { ...order, _recordId: created.id };
     setOrders(prev => [withRecord, ...prev]);
 
-    // Get readable payment method label for emails
     const pmLabel = paymentMethods.find(p => p.id === paymentMethod)?.label || paymentMethod;
 
-    // Send payroll notification email to Cynthia
     if (isPayroll) {
-      sendPayrollEmail({
-        name,
-        storeNumber: department,
-        email,
-        total:   snapTotal,
-        orderId: order.id,
-      });
+      sendPayrollEmail({ name, storeNumber: department, email, total: snapTotal, orderId: order.id });
     }
 
-    // Send order confirmation email to the customer
     sendConfirmationEmail({
-      name,
-      email,
-      storeNumber:   department,
-      orderId:       order.id,
-      date:          order.date,
-      items:         snapItems,
-      total:         snapTotal,
+      name, email, storeNumber: department,
+      orderId: order.id, date: order.date,
+      items: snapItems, total: snapTotal,
       paymentMethod: pmLabel,
     });
 
