@@ -415,6 +415,16 @@ function OrdersTab() {
                       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:16 }}>
                         <div><p style={lbl}>Contact</p><p style={sm}>{order.email}</p><p style={sm}>Store: {order.department}</p></div>
                         <div><p style={lbl}>Payment</p><p style={sm}>{payMethod?.label}</p><p style={{...sm,color:"#bbb"}}>{payMethod?.handle}</p></div>
+                        <div>
+                        <p style={lbl}>Payment Confirmation</p>
+                        {order.paymentMethod === "payroll" ? (
+                          <p style={{...sm, color:"#166534", fontWeight:600}}>✓ Authorized via payroll deduction</p>
+                        ) : order.paymentConfirmedByUser ? (
+                          <p style={{...sm, color:"#166534", fontWeight:600}}>✓ Guest confirmed payment sent</p>
+                        ) : (
+                          <p style={{...sm, color:"#A22325", fontWeight:600}}>⚠ Guest did not confirm payment</p>
+                        )}
+                      </div>
                         {order.notes && <div><p style={lbl}>Notes</p><p style={{...sm,fontStyle:"italic",color:"#888"}}>{order.notes}</p></div>}
                         {order.couponCode && <div><p style={lbl}>Coupon</p><p style={{...sm,color:"#166634",fontWeight:600}}>{order.couponCode} (−{formatCurrency(order.discount||0)})</p></div>}
                       </div>
