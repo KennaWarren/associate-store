@@ -53,6 +53,7 @@ export async function fetchOrders() {
     total:         r.fields.Total         || 0,
     status:        r.fields.Status        || "pending",
     paid:          r.fields.Paid          || false,
+    paymentConfirmedByUser: r.fields.PaymentConfirmed || false,
   }));
 }
 export async function createOrder(order) {
@@ -63,6 +64,7 @@ export async function createOrder(order) {
     Subtotal: order.subtotal, Discount: order.discount || 0,
     CouponCode: order.couponCode || "", Total: order.total,
     Status: order.status, Paid: order.paid,
+    PaymentConfirmed: order.paymentConfirmedByUser || false,
   });
 }
 export async function updateOrder(recordId, changes) {
