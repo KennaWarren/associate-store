@@ -38,35 +38,45 @@ async function deleteRecord(table, recordId) {
 export async function fetchOrders() {
   const records = await fetchAll("Orders");
   return records.map(r => ({
-    _recordId:     r.id,
-    id:            r.fields.OrderId       || "",
-    date:          r.fields.Date          || new Date().toISOString(),
-    name:          r.fields.Name          || "",
-    email:         r.fields.Email         || "",
-    department:    r.fields.Department    || "",
-    paymentMethod: r.fields.PaymentMethod || "",
-    notes:         r.fields.Notes         || "",
-    items:         JSON.parse(r.fields.Items || "[]"),
-    subtotal:      r.fields.Subtotal      || 0,
-    discount:      r.fields.Discount      || 0,
-    couponCode:    r.fields.CouponCode    || null,
-    total:         r.fields.Total         || 0,
-    status:        r.fields.Status        || "pending",
-    paid:          r.fields.Paid          || false,
-    paymentConfirmedByUser: r.fields.PaymentConfirmed || false,
+    _recordId:             r.id,
+    id:                    r.fields.OrderId              || "",
+    date:                  r.fields.Date                 || new Date().toISOString(),
+    name:                  r.fields.Name                 || "",
+    email:                 r.fields.Email                || "",
+    department:            r.fields.Department           || "",
+    paymentMethod:         r.fields.PaymentMethod        || "",
+    notes:                 r.fields.Notes                || "",
+    items:                 JSON.parse(r.fields.Items     || "[]"),
+    subtotal:              r.fields.Subtotal             || 0,
+    discount:              r.fields.Discount             || 0,
+    couponCode:            r.fields.CouponCode           || null,
+    total:                 r.fields.Total                || 0,
+    status:                r.fields.Status               || "pending",
+    paid:                  r.fields.Paid                 || false,
+    paymentConfirmedByUser: r.fields.PaymentConfirmed    || false,
   }));
 }
+
 export async function createOrder(order) {
   return createRecord("Orders", {
-    OrderId: order.id, Date: order.date, Name: order.name, Email: order.email,
-    Department: order.department, PaymentMethod: order.paymentMethod,
-    Notes: order.notes || "", Items: JSON.stringify(order.items),
-    Subtotal: order.subtotal, Discount: order.discount || 0,
-    CouponCode: order.couponCode || "", Total: order.total,
-    Status: order.status, Paid: order.paid,
-    PaymentConfirmed: order.paymentConfirmedByUser || false,
+    OrderId:           order.id,
+    Date:              order.date,
+    Name:              order.name,
+    Email:             order.email,
+    Department:        order.department,
+    PaymentMethod:     order.paymentMethod,
+    Notes:             order.notes || "",
+    Items:             JSON.stringify(order.items),
+    Subtotal:          order.subtotal,
+    Discount:          order.discount || 0,
+    CouponCode:        order.couponCode || "",
+    Total:             order.total,
+    Status:            order.status,
+    Paid:              order.paid,                          // true only for payroll
+    PaymentConfirmed:  order.paymentConfirmedByUser || false, // true if guest clicked checkbox
   });
 }
+
 export async function updateOrder(recordId, changes) {
   const fields = {};
   if (changes.status !== undefined) fields.Status = changes.status;
@@ -94,10 +104,15 @@ export async function fetchProducts() {
 }
 export async function createProduct(product) {
   return createRecord("Products", {
-    ProductId: String(product.id), Name: product.name,
-    Description: product.description || "", Price: product.price, Cost: product.cost || 0,
-    Category: product.category || "Other", Variants: JSON.stringify(product.variants || {}),
-    Image: product.image || "", VariantImages: JSON.stringify(product.variantImages || {}),
+    ProductId:     String(product.id),
+    Name:          product.name,
+    Description:   product.description   || "",
+    Price:         product.price,
+    Cost:          product.cost          || 0,
+    Category:      product.category      || "Other",
+    Variants:      JSON.stringify(product.variants      || {}),
+    Image:         product.image         || "",
+    VariantImages: JSON.stringify(product.variantImages || {}),
   });
 }
 export async function updateProduct(recordId, changes) {
@@ -143,20 +158,14 @@ export async function updateSuggestion(recordId, changes) {
 export async function deleteSuggestion(recordId) { return deleteRecord("Suggestions", recordId); }
 
 // ── EMAIL via EmailJS ──
-// 1. Sign up free at emailjs.com
-// 2. Create a Service (connect your Outlook)
-// 3. Create two Email Templates:
-//    - Payroll template (sends to Cynthia): use {{employee_name}}, {{store_number}}, {{employee_email}}, {{total_amount}}, {{order_id}}
-//    - Confirmation template (sends to customer): use {{customer_name}}, {{customer_email}}, {{order_id}}, {{order_date}}, {{store_number}}, {{payment_method}}, {{order_items}}, {{total_amount}}, {{payment_instructions}}
-// 4. Paste your IDs below
-const EMAILJS_SERVICE_ID            = "service_0z1k327";
-const EMAILJS_TEMPLATE_ID           = "template_3qo7qsh";
-const EMAILJS_CONFIRMATION_TEMPLATE = "template_ie9cie8";
-const EMAILJS_PUBLIC_KEY            = "zR6vmfen37yC_H899";
+const EMAILJS_SERVICE_ID            = "YOUR_EMAILJS_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID           = "YOUR_EMAILJS_PAYROLL_TEMPLATE_ID";
+const EMAILJS_CONFIRMATION_TEMPLATE = "YOUR_EMAILJS_CONFIRMATION_TEMPLATE_ID";
+const EMAILJS_PUBLIC_KEY            = "YOUR_EMAILJS_PUBLIC_KEY";
 
 async function sendEmail(templateId, templateParams) {
   if (EMAILJS_SERVICE_ID === "YOUR_EMAILJS_SERVICE_ID") {
-    console.warn("EmailJS not configured — skipping email send.");
+    console.warn("EmailJS not configured — skipping.");
     return false;
   }
   try {
@@ -177,10 +186,9 @@ async function sendEmail(templateId, templateParams) {
   }
 }
 
-// Sends to Cynthia when a payroll deduction order is placed
 export async function sendPayrollEmail({ name, storeNumber, email, total, orderId }) {
   return sendEmail(EMAILJS_TEMPLATE_ID, {
-    to_email:       "mwarren@rogent.com",
+    to_email:       "CWindham@Rogent.Com",
     to_name:        "Cynthia",
     employee_name:  name,
     store_number:   storeNumber,
@@ -190,7 +198,6 @@ export async function sendPayrollEmail({ name, storeNumber, email, total, orderI
   });
 }
 
-// Sends order confirmation to the customer
 export async function sendConfirmationEmail({ name, email, storeNumber, orderId, date, items, total, paymentMethod }) {
   const itemsList = items.map(i => {
     const variants = Object.values(i.variants || {});
@@ -200,7 +207,7 @@ export async function sendConfirmationEmail({ name, email, storeNumber, orderId,
 
   const paymentInstructions = paymentMethod.toLowerCase().includes("payroll")
     ? "Your payment will be deducted from your next paycheck. No further action is needed."
-    : `Please ensure you have sent your payment of $${total.toFixed(2)} via ${paymentMethod}. Include your order ID in the payment note.`;
+    : `Please ensure you have sent your payment of $${total.toFixed(2)} via ${paymentMethod}.`;
 
   return sendEmail(EMAILJS_CONFIRMATION_TEMPLATE, {
     customer_email:       email,
