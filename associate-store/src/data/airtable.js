@@ -158,10 +158,10 @@ export async function updateSuggestion(recordId, changes) {
 export async function deleteSuggestion(recordId) { return deleteRecord("Suggestions", recordId); }
 
 // ── EMAIL via EmailJS ──
-const EMAILJS_SERVICE_ID            = "YOUR_EMAILJS_SERVICE_ID";
-const EMAILJS_TEMPLATE_ID           = "YOUR_EMAILJS_PAYROLL_TEMPLATE_ID";
-const EMAILJS_CONFIRMATION_TEMPLATE = "YOUR_EMAILJS_CONFIRMATION_TEMPLATE_ID";
-const EMAILJS_PUBLIC_KEY            = "YOUR_EMAILJS_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID            = "service_0z1k327";
+const EMAILJS_TEMPLATE_ID           = "template_3qo7qsh";
+const EMAILJS_CONFIRMATION_TEMPLATE = "template_ie9cie8";
+const EMAILJS_PUBLIC_KEY            = "zR6vmfen37yC_H899";
 
 async function sendEmail(templateId, templateParams) {
   if (EMAILJS_SERVICE_ID === "YOUR_EMAILJS_SERVICE_ID") {
