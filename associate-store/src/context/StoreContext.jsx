@@ -151,9 +151,9 @@ export function StoreProvider({ children }) {
       couponCode: appliedCoupon?.code || null,
       total:      snapTotal,
       status:     "pending",
-      // Payroll = auto paid. Venmo/PayPal = only paid if employee confirmed payment checkbox
-      paid:       isPayroll ? true : (paymentConfirmedByUser === true),
-      // Store whether employee clicked the payment confirmation checkbox
+      // Only payroll deduction is auto-marked paid. Venmo/PayPal always come in as unpaid.
+      paid:       isPayroll === true,
+      // Separately track whether the guest clicked the payment confirmation checkbox
       paymentConfirmedByUser: paymentConfirmedByUser === true,
     };
 
