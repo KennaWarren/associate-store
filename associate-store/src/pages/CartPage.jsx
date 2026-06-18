@@ -19,8 +19,9 @@ export default function CartPage({ setPage }) {
   const [submitError, setSubmitError] = useState(null);
   const [couponInput, setCouponInput] = useState("");
   const [couponMsg, setCouponMsg]     = useState(null);
-  const [payrollAgreed, setPayrollAgreed]       = useState(false);
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [payrollAgreed, setPayrollAgreed]         = useState(false);
+  const [paymentConfirmed, setPaymentConfirmed]   = useState(false);
+  const [eSignature, setESignature]               = useState("");
   const [form, setForm] = useState({ name:"", email:"", department:"", paymentMethod:"venmo", notes:"" });
   const [errors, setErrors] = useState({});
 
@@ -115,7 +116,13 @@ export default function CartPage({ setPage }) {
   // Payroll agreement confirmed — submit order immediately (payroll = confirmed by agreement)
   const handlePayrollConfirm = async () => {
     setSavedTotal(cartTotal);
-    const order = await doPlaceOrder(form, true);
+    const signedForm = {
+      ...form,
+      eSignature,
+      signedAt: new Date().toLocaleString("en-US", { dateStyle:"long", timeStyle:"short" }),
+      signedTotal: cartTotal,
+    };
+    const order = await doPlaceOrder(signedForm, true);
     if (order) setStep("confirm");
   };
 
@@ -164,23 +171,57 @@ export default function CartPage({ setPage }) {
               <li>I may request a copy of this authorization at any time</li>
             </ul>
           </div>
-          <label style={{ display:"flex", alignItems:"flex-start", gap:12, cursor:"pointer", marginBottom:24 }}>
+          <label style={{ display:"flex", alignItems:"flex-start", gap:12, cursor:"pointer", marginBottom:20 }}>
             <input type="checkbox" checked={payrollAgreed} onChange={e => setPayrollAgreed(e.target.checked)}
               style={{ accentColor:"#A22325", width:18, height:18, marginTop:2, flexShrink:0 }} />
             <span style={{ fontSize:14, color:"#333", lineHeight:1.6 }}>
               I authorize the deduction of <strong>{formatCurrency(cartTotal)}</strong> from my paycheck as described above.
             </span>
           </label>
+
+          {/* Electronic Signature */}
+          <div style={{ marginBottom:24 }}>
+            <label style={{ display:"block", fontSize:11, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#aaa", marginBottom:8 }}>
+              Electronic Signature *
+            </label>
+            <p style={{ fontSize:12, color:"#bbb", marginBottom:10, lineHeight:1.5 }}>
+              Type your full legal name below to electronically sign this authorization. By signing, you confirm all information above is accurate and you authorize this deduction.
+            </p>
+            <input
+              value={eSignature}
+              onChange={e => setESignature(e.target.value)}
+              placeholder="Type your full name to sign..."
+              style={{
+                width:"100%", padding:"13px 16px",
+                border:`1.5px solid ${eSignature.trim() ? "#A22325" : "#EAEAEA"}`,
+                borderRadius:10, fontSize:15,
+                fontFamily:"'Georgia', serif",
+                fontStyle: eSignature ? "italic" : "normal",
+                color:"#1a1a1a", outline:"none",
+                background: eSignature.trim() ? "#FFF8F8" : "#F7F7F7",
+                boxSizing:"border-box",
+                transition:"all 0.2s",
+                letterSpacing:"0.03em",
+              }}
+            />
+            {eSignature.trim() && (
+              <div style={{ marginTop:8, padding:"10px 14px", background:"#F7F7F7", borderRadius:8, border:"1px solid #EAEAEA" }}>
+                <p style={{ fontSize:11, color:"#bbb", marginBottom:4 }}>Signed as:</p>
+                <p style={{ fontSize:16, fontFamily:"'Georgia', serif", fontStyle:"italic", color:"#1a1a1a", fontWeight:600 }}>{eSignature}</p>
+                <p style={{ fontSize:11, color:"#bbb", marginTop:4 }}>{new Date().toLocaleString("en-US", { dateStyle:"long", timeStyle:"short" })}</p>
+              </div>
+            )}
+          </div>
           {submitError && <p style={{ fontSize:13, color:"#A22325", marginBottom:12 }}>{submitError}</p>}
           <div style={{ display:"flex", gap:12 }}>
-            <button onClick={handlePayrollConfirm} disabled={!payrollAgreed || submitting} style={{
-              flex:1, background: payrollAgreed && !submitting ? "#A22325" : "#EAEAEA",
-              color: payrollAgreed && !submitting ? "#fff" : "#aaa",
+            <button onClick={handlePayrollConfirm} disabled={!payrollAgreed || !eSignature.trim() || submitting} style={{
+              flex:1, background: payrollAgreed && eSignature.trim() && !submitting ? "#A22325" : "#EAEAEA",
+              color: payrollAgreed && eSignature.trim() && !submitting ? "#fff" : "#aaa",
               border:"none", borderRadius:12, padding:"14px", fontSize:14, fontWeight:700,
-              cursor: payrollAgreed && !submitting ? "pointer" : "not-allowed",
-              boxShadow: payrollAgreed ? "0 4px 16px rgba(162,35,37,0.3)" : "none", transition:"all 0.2s",
+              cursor: payrollAgreed && eSignature.trim() && !submitting ? "pointer" : "not-allowed",
+              boxShadow: payrollAgreed && eSignature.trim() ? "0 4px 16px rgba(162,35,37,0.3)" : "none", transition:"all 0.2s",
             }}>
-              {submitting ? "Submitting…" : "Agree & Place Order"}
+              {submitting ? "Submitting…" : "Sign & Place Order"}
             </button>
             <button onClick={() => setStep("checkout")} style={{ flex:1, background:"#F7F7F7", color:"#666", border:"1.5px solid #EAEAEA", borderRadius:12, padding:"14px", fontSize:14, fontWeight:600, cursor:"pointer" }}>
               Cancel
