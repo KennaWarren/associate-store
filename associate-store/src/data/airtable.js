@@ -186,7 +186,12 @@ async function sendEmail(templateId, templateParams) {
   }
 }
 
-export async function sendPayrollEmail({ name, storeNumber, email, total, orderId }) {
+export async function sendPayrollEmail({ name, storeNumber, email, total, orderId, eSignature, signedAt, items }) {
+  const itemsList = (items || []).map(i => {
+    const variants = Object.values(i.variants || {});
+    return `${i.productName}${variants.length ? ` (${variants.join(", ")})` : ""}  x${i.qty}  — $${i.subtotal.toFixed(2)}`;
+  }).join("\n");
+
   return sendEmail(EMAILJS_TEMPLATE_ID, {
     to_email:       "CWindham@Rogent.Com",
     to_name:        "Cynthia",
@@ -195,6 +200,39 @@ export async function sendPayrollEmail({ name, storeNumber, email, total, orderI
     employee_email: email,
     total_amount:   `$${total.toFixed(2)}`,
     order_id:       orderId,
+    // Full signed authorization form content included in email
+    signed_form: `
+═══════════════════════════════════════════
+PAYROLL DEDUCTION AUTHORIZATION FORM
+═══════════════════════════════════════════
+
+Employee Name:   ${name}
+Store Number:    ${storeNumber}
+Employee Email:  ${email}
+Order ID:        ${orderId}
+Amount:          $${total.toFixed(2)}
+
+ITEMS ORDERED:
+${itemsList}
+
+AUTHORIZATION TEXT:
+By electronically signing below, I authorize a payroll deduction
+from my paycheck for the amount indicated. This authorization covers
+both voluntary store purchases and overpayment corrections on payroll
+checks. I understand that:
+
+  - This deduction will appear on my next available pay period
+  - Overpayment deductions may be initiated by Payroll directly
+    and do not always require prior HR approval
+  - For questions about overpayments, contact Payroll directly
+  - This authorization is for this transaction only
+  - I may request a copy of this authorization at any time
+
+ELECTRONIC SIGNATURE:  ${eSignature || name}
+DATE SIGNED:           ${signedAt}
+
+This electronic signature constitutes a legally binding authorization.
+═══════════════════════════════════════════`,
   });
 }
 
