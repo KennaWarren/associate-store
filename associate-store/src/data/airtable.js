@@ -34,7 +34,7 @@ async function deleteRecord(table, recordId) {
   return data;
 }
 
-// ── ORDERS ──
+// ── ORDERS  ──
 export async function fetchOrders() {
   const records = await fetchAll("Orders");
   return records.map(r => ({
