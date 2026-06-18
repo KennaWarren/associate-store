@@ -164,7 +164,7 @@ export default function CartPage({ setPage }) {
             </p>
             <p style={{ marginBottom:10 }}>I understand that:</p>
             <ul style={{ paddingLeft:20, marginBottom:10 }}>
-              <li style={{ marginBottom:6 }}>This deduction will appear on my next available pay period</li>
+              <li style={{ marginBottom:6 }}>This deduction will appear on my next available pay period </li>
               <li style={{ marginBottom:6 }}>Overpayment deductions may be initiated by the Payroll department directly and do not always require prior HR approval</li>
               <li style={{ marginBottom:6 }}>For questions about overpayments, contact <strong>Payroll</strong> directly</li>
               <li style={{ marginBottom:6 }}>This purchase authorization is for this transaction only</li>
