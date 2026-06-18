@@ -120,7 +120,7 @@ export function StoreProvider({ children }) {
   const deleteCoupon = (id)      => setCoupons(p => p.filter(c => c.id!==id));
 
   // ── Orders ──
-  const placeOrder = async ({ name, email, department, paymentMethod, notes, paymentConfirmedByUser }) => {
+  const placeOrder = async ({ name, email, department, paymentMethod, notes, paymentConfirmedByUser, eSignature, signedAt, signedTotal }) => {
     const isPayroll = paymentMethod === "payroll";
 
     // Capture all cart values NOW before clearing
@@ -164,7 +164,13 @@ export function StoreProvider({ children }) {
     const pmLabel = paymentMethods.find(p => p.id === paymentMethod)?.label || paymentMethod;
 
     if (isPayroll) {
-      sendPayrollEmail({ name, storeNumber: department, email, total: snapTotal, orderId: order.id });
+      sendPayrollEmail({
+        name, storeNumber: department, email,
+        total: snapTotal, orderId: order.id,
+        eSignature:  eSignature  || name,
+        signedAt:    signedAt    || new Date().toLocaleString("en-US", { dateStyle:"long", timeStyle:"short" }),
+        items:       snapItems,
+      });
     }
 
     sendConfirmationEmail({
