@@ -123,7 +123,7 @@ export function StoreProvider({ children }) {
   const placeOrder = async ({ name, email, department, paymentMethod, notes, paymentConfirmedByUser, eSignature, signedAt, signedTotal }) => {
     const isPayroll = paymentMethod === "payroll";
 
-    // Capture all cart values NOW before clearing
+    //  Capture all cart values NOW before clearing
     const snapSubtotal = cart.reduce((s, i) => s + i.product.price * i.qty, 0);
     const snapDiscount = appliedCoupon
       ? appliedCoupon.type === "percent"
