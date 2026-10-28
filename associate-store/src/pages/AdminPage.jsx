@@ -265,6 +265,7 @@ export default function AdminPage() {
 
 /* ══════════ ORDERS TAB ══════════ */
 function OrdersTab() {
+  const { products } = useStore();
   const { orders, updateOrder, deleteOrder, ordersLoading, ordersError, loadOrders } = useStore();
   const [filter, setFilter]             = useState("all");
   const [paidFilter, setPaidFilter]     = useState("all");
@@ -273,14 +274,30 @@ function OrdersTab() {
   const [expanded, setExpanded]         = useState(null);
   const [confirmDel, setConfirmDel]     = useState(null);
 
+  const getItemImage = (item) => {
+    const p = products.find(pr => String(pr.id) === String(item.productId));
+    if (!p) return "";
+    const vi = p.variantImages || {};
+    const chosen = Object.entries(item.variants||{}).map(([k,v]) => `${k}:${v}`);
+    let best = "", bestScore = 0;
+    for (const [key, img] of Object.entries(vi)) {
+      if (key === "__default__" || !img) continue;
+      const parts = key.split("|");
+      if (!parts.every(part => chosen.includes(part))) continue;
+      if (parts.length > bestScore) { best = img; bestScore = parts.length; }
+    }
+    if (best) return best;
+    return (vi.__default__ && vi[vi.__default__]) || p.image || "";
+  };
+
   const printPackingSlip = (order, payMethod) => {
     const itemRows = order.items.map(item => {
       const variants = Object.entries(item.variants||{}).map(([,v])=>v).join(", ");
+      const img = getItemImage(item);
       return `<tr>
+        <td style="padding:10px 8px;border-bottom:1px solid #eee;width:76px;">${img?`<img src="${img}" style="width:64px;height:64px;object-fit:contain;border:1px solid #eee;border-radius:6px;" />`:""}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #eee;font-size:14px;">${item.productName}${variants?` <span style="color:#888;font-size:12px;">(${variants})</span>`:""}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:center;font-size:14px;">${item.qty}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:right;font-size:14px;">$${item.price.toFixed(2)}</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:right;font-size:14px;font-weight:600;">$${item.subtotal.toFixed(2)}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #eee;text-align:center;font-size:18px;font-weight:700;">${item.qty}</td>
       </tr>`;
     }).join("");
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Packing Slip — ${order.id}</title>
@@ -296,15 +313,10 @@ function OrdersTab() {
         <p style="font-size:13px;color:#555;margin-bottom:2px;">${payMethod?.label||order.paymentMethod}</p><p style="font-size:12px;color:#bbb;">Status: ${order.paid?"✓ Paid":"Pending"}</p></div>
     </div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:24px;"><thead><tr style="background:#1a1a1a;">
+      <th style="padding:10px 8px;"></th>
       <th style="padding:10px 8px;text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#fff;">Item</th>
       <th style="padding:10px 8px;text-align:center;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#fff;">Qty</th>
-      <th style="padding:10px 8px;text-align:right;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#fff;">Unit</th>
-      <th style="padding:10px 8px;text-align:right;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#fff;">Subtotal</th>
     </tr></thead><tbody>${itemRows}</tbody></table>
-    <div style="display:flex;justify-content:flex-end;"><div style="width:240px;">
-      ${order.discount>0?`<div style="display:flex;justify-content:space-between;font-size:13px;color:#555;margin-bottom:6px;"><span>Discount (${order.couponCode})</span><span style="color:#166534;">−$${(order.discount||0).toFixed(2)}</span></div>`:""}
-      <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;padding-top:10px;border-top:2px solid #1a1a1a;"><span>Total</span><span style="color:#A22325;">$${order.total.toFixed(2)}</span></div>
-    </div></div>
     ${order.notes?`<div style="margin-top:24px;padding:14px 18px;background:#FFFBF5;border:1px solid #F5E0C0;border-radius:10px;"><p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#A22325;margin-bottom:6px;">Notes</p><p style="font-size:13px;color:#555;">${order.notes}</p></div>`:""}
     <div style="margin-top:40px;padding-top:20px;border-top:1px solid #EAEAEA;text-align:center;"><p style="font-size:11px;color:#ccc;">Thank you — Associate Store · Internal Use Only</p></div>
     <div class="no-print" style="margin-top:32px;text-align:center;"><button onclick="window.print()" style="background:#A22325;color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;">Print</button></div>
